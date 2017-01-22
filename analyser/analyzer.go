@@ -2,7 +2,6 @@ package analyser
 
 import (
 	"./parser"
-	"./report"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -14,6 +13,7 @@ import (
 type Analyzer struct {
 	pcaps       []string
 	workerCount int
+	workers     []parser.Pcap
 }
 
 func NewAnalyzer(pcaps []string, concurrentFiles int) (a Analyzer) {
@@ -28,16 +28,13 @@ func (a Analyzer) Run(output string) {
 
 	var files = make(chan string)
 	var wg = sync.WaitGroup{}
-	var acc = report.NewAccumulator(1000)
 
 	for i := 0; i < a.workerCount; i++ {
 		worker := parser.NewPcap(fmt.Sprintf("Worker %d", i), files)
-		acc.AddWorker(&worker)
 		wg.Add(1)
+		a.workers = append(a.workers, worker)
 		go worker.Run(&wg)
 	}
-
-	go acc.Run()
 
 	for _, file := range a.pcaps {
 		files <- file
@@ -46,18 +43,27 @@ func (a Analyzer) Run(output string) {
 
 	fmt.Println("Waiting for finished Workers")
 	wg.Wait()
-	acc.Finish()
 	fmt.Println("All done")
 
 	elapsed := time.Since(start)
 
-	fmt.Printf("Took %s for %d packets\n", elapsed, acc.Get("sum"))
+	fmt.Printf("Took %s\n", elapsed)
 	fmt.Println("Writing report")
 
 	f, _ := os.Create(output)
 	w := csv.NewWriter(f)
 
-	for line := range acc.GetCsv() {
+	result := a.workers[0].Acc
+	for i, w := range a.workers {
+		if i == 0 {
+			continue
+		}
+		result.Merge(w.Acc)
+	}
+
+	fmt.Println(result.Summary())
+
+	for line := range result.GetCsv() {
 		if err := w.Write(line); err != nil {
 			log.Fatalln("error writing record to csv:", err)
 		}
@@ -69,5 +75,4 @@ func (a Analyzer) Run(output string) {
 	if err := w.Error(); err != nil {
 		log.Fatal(err)
 	}
-
 }

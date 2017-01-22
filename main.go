@@ -49,7 +49,7 @@ func main() {
 			log.Fatalln("inDir is not a directory")
 			return
 		}
-		pcapList = collectFilesOfType(inputPath, ".pcap", true)
+		pcapList = collectFilesOfType(inputPath, ".pcap,.pcap.gz", true)
 	} else {
 		log.Fatalln("Neither inFile nor inDir specified")
 		return
@@ -59,7 +59,19 @@ func main() {
 	analyzer.Run(reportFile)
 }
 
-func collectFilesOfType(path string, suffix string, sorted bool) []string {
+type ByFileSize []os.FileInfo
+
+func (s ByFileSize) Len() int {
+	return len(s)
+}
+func (s ByFileSize) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ByFileSize) Less(i, j int) bool {
+	return s[i].Size() > s[j].Size()
+}
+
+func collectFilesOfType(path string, suffixes string, sorted bool) []string {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -68,14 +80,15 @@ func collectFilesOfType(path string, suffix string, sorted bool) []string {
 
 	fileList := make([]string, 0)
 
+	sort.Sort(ByFileSize(files))
+
 	for _, file := range files {
 		name := file.Name()
-		if strings.HasSuffix(name, suffix) {
-			fileList = append(fileList, path+"/"+name)
+		for _, suffix := range strings.Split(suffixes, ",") {
+			if strings.HasSuffix(name, suffix) {
+				fileList = append(fileList, path+"/"+name)
+			}
 		}
-	}
-	if sorted {
-		sort.Strings(fileList)
 	}
 
 	return fileList
