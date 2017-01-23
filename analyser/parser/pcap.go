@@ -1,19 +1,22 @@
 package parser
 
 import (
-	"fmt"
-	"github.com/google/gopacket/pcapgo"
-	"sync"
-	"os"
-	"bufio"
 	"../report"
+	"bufio"
 	"encoding/binary"
+	"fmt"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcapgo"
+	"io"
 	"log"
+	"os"
+	"sync"
 )
 
 var (
-	bufferSize int = 128 * 1024 * 1024 // 128M
-	darknetMAC uint64 = 0x000c29027be7
+	bufferSize int    = 128 * 1024 * 1024 // 128M
+	darkNetMAC uint64 = 0x000c29027be7
 )
 
 type Pcap struct {
@@ -26,7 +29,7 @@ type Pcap struct {
 func NewPcap(name string, nextFile chan string) (p Pcap) {
 	p.name = name
 	p.nextFile = nextFile
-	p.Acc = report.NewAccumulator([]string{"ethIn", "ethInBytes", "ethOut", "ethOutBytes", })
+	p.Acc = report.NewAccumulator([]string{"ethIn", "ethInBytes", "ethOut", "ethOutBytes", "udp", "tcpIn", "tcpSyn", "tcpDataBytes", "tcpAck", "udpDataBytes", "transportOther"})
 	return
 }
 
@@ -35,32 +38,64 @@ func (p *Pcap) Run(wg *sync.WaitGroup) {
 	for file := range p.nextFile {
 		p.handleFile(file)
 	}
-	fmt.Printf("Worker %s finished", p.name)
+	fmt.Printf("Worker %s finished\n", p.name)
 }
 
 func (p *Pcap) handleFile(file string) {
-	f, _ := os.Open(file)
+	f, err := os.Open(file)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
 	defer f.Close()
 
-	// Empty old Buffer and set underlying Reader to new file
+	// add a large buffer between File Reader and gcapgo to reduce the amount of IO reads to the filesystem
 	p.r = bufio.NewReaderSize(f, bufferSize)
 
 	if r, err := pcapgo.NewReader(p.r); err != nil {
-		panic(err)
+		log.Panic(err)
 	} else {
 		fmt.Printf("Worker %s handles file %s\n", p.name, file)
 		for {
 			data, ci, err := r.ReadPacketData()
 			if err != nil {
-				log.Println(err)
-				break;
+				if err != io.EOF {
+					// we expect err to be io.EOF at the end of the file.
+					// Other error message are worth to be announced
+					log.Println(err)
+				}
+				break
 			}
 			date := ci.Timestamp.Format("2006/01/02")
 
-			destMac:= binary.BigEndian.Uint64(append([]byte{0, 0}, data[0:6]...))
-			if destMac == darknetMAC {
+			destMac := binary.BigEndian.Uint64(append([]byte{0, 0}, data[0:6]...))
+			if destMac == darkNetMAC {
 				p.Acc.Increment(date, "ethIn")
 				p.Acc.IncrementValue(date, "ethInBytes", len(data))
+
+				packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.Lazy)
+				if packet.TransportLayer() != nil {
+					switch packet.TransportLayer().LayerType() {
+					case layers.LayerTypeUDP:
+						udpLayer := packet.Layer(layers.LayerTypeUDP)
+						udp, _ := udpLayer.(*layers.UDP)
+						p.Acc.Increment(date, "udp")
+						p.Acc.IncrementValue(date, "udpDataBytes", len(udp.LayerPayload()))
+					case layers.LayerTypeTCP:
+						p.Acc.Increment(date, "tcpIn")
+						tcpLayer := packet.Layer(layers.LayerTypeTCP)
+						tcp, _ := tcpLayer.(*layers.TCP)
+						if tcp.SYN {
+							p.Acc.Increment(date, "tcpSyn")
+						}
+						if tcp.ACK {
+							p.Acc.Increment(date, "tcpAck")
+						}
+						p.Acc.IncrementValue(date, "tcpDataBytes", len(tcp.LayerPayload()))
+					default:
+						p.Acc.Increment(date, "transportOther")
+					}
+				}
 			} else {
 				p.Acc.Increment(date, "ethOut")
 				p.Acc.IncrementValue(date, "ethOutBytes", len(data))
