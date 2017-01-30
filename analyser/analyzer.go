@@ -1,19 +1,27 @@
 package analyser
 
 import (
-	"./parser"
+	"./filter"
 	"encoding/csv"
 	"fmt"
+	"github.com/google/gopacket"
 	"log"
 	"os"
 	"sync"
 	"time"
 )
 
+type PacketFilter interface {
+	Run(filterInstruction string)
+	Yes() <-chan gopacket.Packet
+	No() <-chan gopacket.Packet
+	Input(<-chan gopacket.Packet)
+}
+
 type Analyzer struct {
 	pcaps       []string
 	workerCount int
-	workers     []parser.Pcap
+	workers     []filter.Pcap
 }
 
 func NewAnalyzer(pcaps []string, concurrentFiles int) (a Analyzer) {
@@ -30,7 +38,7 @@ func (a Analyzer) Run(output string) {
 	var wg = sync.WaitGroup{}
 
 	for i := 0; i < a.workerCount; i++ {
-		worker := parser.NewPcap(fmt.Sprintf("Worker %d", i), files)
+		worker := filter.NewPcap(fmt.Sprintf("Worker %d", i), files)
 		wg.Add(1)
 		a.workers = append(a.workers, worker)
 		go worker.Run(&wg)

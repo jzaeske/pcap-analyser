@@ -1,4 +1,4 @@
-package parser
+package filter
 
 import (
 	"../report"
@@ -29,7 +29,7 @@ type Pcap struct {
 func NewPcap(name string, nextFile chan string) (p Pcap) {
 	p.name = name
 	p.nextFile = nextFile
-	p.Acc = report.NewAccumulator([]string{"ethIn", "ethInBytes", "ethOut", "ethOutBytes", "udp", "tcpIn", "tcpSyn", "tcpDataBytes", "tcpAck", "udpDataBytes", "transportOther"})
+	p.Acc = report.NewAccumulator([]string{"ethIn", "ethInBytes", "ethOut", "ethOutBytes", "udp", "tcpIn", "tcpSyn", "tcpSynHeaderBytes", "tcpAck", "tcpAckHeaderBytes", "tcpOther", "tcpOtherHeaderBytes", "tcpDataBytes", "udpDataBytes", "transportOther"})
 	return
 }
 
@@ -59,12 +59,18 @@ func (p *Pcap) handleFile(file string) {
 		for {
 			data, ci, err := r.ReadPacketData()
 			if err != nil {
-				if err != io.EOF {
-					// we expect err to be io.EOF at the end of the file.
-					// Other error message are worth to be announced
-					log.Println(err)
+				if err == io.EOF {
+					// ok: that's usual
+					break
+				} else if err == io.ErrUnexpectedEOF {
+					// not so usual, but we can accept it. There are some bytes in the buffer
+					// we can try to parse. But we should log here
+					// we break next time when we get EOF
+					log.Printf("got %x with %d bytes not filled completely\n", err, len(data))
+				} else {
+					break
 				}
-				break
+
 			}
 			date := ci.Timestamp.Format("2006/01/02")
 
@@ -87,10 +93,17 @@ func (p *Pcap) handleFile(file string) {
 						tcp, _ := tcpLayer.(*layers.TCP)
 						if tcp.SYN {
 							p.Acc.Increment(date, "tcpSyn")
+							p.Acc.IncrementValue(date, "tcpSynHeaderBytes", len(tcp.LayerContents()))
 						}
 						if tcp.ACK {
 							p.Acc.Increment(date, "tcpAck")
+							p.Acc.IncrementValue(date, "tcpAckHeaderBytes", len(tcp.LayerContents()))
 						}
+						if !tcp.SYN && !tcp.ACK {
+							p.Acc.Increment(date, "tcpOther")
+							p.Acc.IncrementValue(date, "tcpOtherHeaderBytes", len(tcp.LayerContents()))
+						}
+
 						p.Acc.IncrementValue(date, "tcpDataBytes", len(tcp.LayerPayload()))
 					default:
 						p.Acc.Increment(date, "transportOther")
