@@ -19,11 +19,14 @@ var reportFile string
 
 var concurrentFiles int
 
+var summary bool
+
 func init() {
 	flag.StringVar(&inputFile, "inFile", "", "File to analyse")
 	flag.StringVar(&inputPath, "inDir", "", "Directory to scan for PCAP Files")
 	flag.StringVar(&reportFile, "outFile", "", "File to write report. If not set, stdout is used")
 	flag.IntVar(&concurrentFiles, "concurrent", 1, "Number of PCAP Files parsed concurrently")
+	flag.BoolVar(&summary, "summary", false, "Only generate per File Summary")
 }
 
 func main() {
@@ -56,7 +59,9 @@ func main() {
 	}
 
 	analyzer := analyser.NewAnalyzer(pcapList, concurrentFiles)
-	analyzer.Run(reportFile)
+	analyzer.Run(summary)
+	analyzer.ExportCsv(reportFile)
+
 }
 
 type ByFileSize []os.FileInfo

@@ -1,7 +1,8 @@
 package analyser
 
 import (
-	"./filter"
+	"./components"
+	"./report"
 	"encoding/csv"
 	"fmt"
 	"github.com/google/gopacket"
@@ -18,19 +19,25 @@ type PacketFilter interface {
 	Input(<-chan gopacket.Packet)
 }
 
+type Worker interface {
+	Run(wg *sync.WaitGroup)
+	Acc() *report.Accumulator
+}
+
 type Analyzer struct {
 	pcaps       []string
 	workerCount int
-	workers     []filter.Pcap
+	workers     []Worker
 }
 
-func NewAnalyzer(pcaps []string, concurrentFiles int) (a Analyzer) {
+func NewAnalyzer(pcaps []string, concurrentFiles int) (a *Analyzer) {
+	a = &Analyzer{}
 	a.pcaps = pcaps
 	a.workerCount = concurrentFiles
 	return
 }
 
-func (a Analyzer) Run(output string) {
+func (a *Analyzer) Run(summary bool) {
 
 	start := time.Now()
 
@@ -38,7 +45,12 @@ func (a Analyzer) Run(output string) {
 	var wg = sync.WaitGroup{}
 
 	for i := 0; i < a.workerCount; i++ {
-		worker := filter.NewPcap(fmt.Sprintf("Worker %d", i), files)
+		var worker Worker
+		if summary {
+			worker = components.NewSummary(fmt.Sprintf("Worker %d", i), files)
+		} else {
+			worker = components.NewPcap(fmt.Sprintf("Worker %d", i), files)
+		}
 		wg.Add(1)
 		a.workers = append(a.workers, worker)
 		go worker.Run(&wg)
@@ -56,17 +68,21 @@ func (a Analyzer) Run(output string) {
 	elapsed := time.Since(start)
 
 	fmt.Printf("Took %s\n", elapsed)
+
+}
+
+func (a *Analyzer) ExportCsv(output string) {
 	fmt.Println("Writing report")
 
 	f, _ := os.Create(output)
 	w := csv.NewWriter(f)
 
-	result := a.workers[0].Acc
+	result := a.workers[0].Acc()
 	for i, w := range a.workers {
 		if i == 0 {
 			continue
 		}
-		result.Merge(w.Acc)
+		result.Merge(*w.Acc())
 	}
 
 	fmt.Println(result.Summary())
