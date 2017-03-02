@@ -2,13 +2,14 @@ package main
 
 import (
 	"./analyser"
+	_ "./log"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"sort"
 	"strings"
+	"log"
 )
 
 var inputFile string
@@ -26,7 +27,6 @@ func init() {
 	flag.StringVar(&inputPath, "inDir", "", "Directory to scan for PCAP Files")
 	flag.StringVar(&reportFile, "outFile", "", "File to write report. If not set, stdout is used")
 	flag.IntVar(&concurrentFiles, "concurrent", 1, "Number of PCAP Files parsed concurrently")
-	flag.BoolVar(&summary, "summary", false, "Only generate per File Summary")
 }
 
 func main() {
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	analyzer := analyser.NewAnalyzer(pcapList, concurrentFiles)
-	analyzer.Run(summary)
+	analyzer.Run()
 	analyzer.ExportCsv(reportFile)
 
 }

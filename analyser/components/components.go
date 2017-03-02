@@ -41,7 +41,7 @@ func (f InOutFilter) Decide(measurement Measurement) bool {
 }
 
 type DayCounter struct {
-	identifier string
+	Identifier string
 }
 
 func (d DayCounter) GroupKey(measurement Measurement) string {
@@ -51,5 +51,5 @@ func (d DayCounter) DataLen(measurement Measurement) int {
 	return len((*measurement.Packet).Data())
 }
 func (d DayCounter) ColumnIdentifier() string {
-	return d.identifier
+	return d.Identifier
 }

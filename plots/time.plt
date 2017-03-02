@@ -1,4 +1,4 @@
-#set title "Data usage over the last 24 hours"
+git #set title "Data usage over the last 24 hours"
 set datafile separator ","
 set key autotitle columnhead
 set xdata time

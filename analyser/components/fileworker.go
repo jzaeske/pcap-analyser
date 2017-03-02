@@ -1,9 +1,7 @@
 package components
 
 import (
-	"../report"
 	"bufio"
-	"encoding/binary"
 	"github.com/google/gopacket/pcapgo"
 	"io"
 	"log"
@@ -13,40 +11,44 @@ import (
 	"time"
 )
 
+// TODO: Hier nicht so sinnvoll...
 var minDate = time.Date(2017, 12, 31, 0, 0, 0, 0, time.UTC)
 var maxDate = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
-type Worker struct {
-	name     string
-	chain	 Parser
-	acc      report.Accumulator
-	r        *bufio.Reader
-	wg 	 *sync.WaitGroup
+var wg sync.WaitGroup = sync.WaitGroup{}
+
+// File Workers organize synchronization via a sync.WaitGroup. Use Wait() to wait for all running File Workers to finish
+func WaitForFileWorkers() {
+	log.Println("Wait for all file workers to finish")
+	wg.Wait()
+	log.Println("All FileWorkers finished")
 }
 
-func NewWorker(name string, chain Parser) (w Worker) {
+type FileWorker struct {
+	name     string
+	chain	 *Parser
+	r        *bufio.Reader
+}
+
+func NewFileWorker(name string, chain *Parser) (w FileWorker) {
 	w.name = name
-	w.acc = report.NewAccumulator([]string{"dateMin", "dateMax", "ethIn", "ethInBytes", "ethOut", "ethOutBytes"})
 	w.chain = chain
 	return
 }
 
-func (w Worker) Acc() *report.Accumulator {
-	return &w.acc
-}
-
-func (w Worker) Run(files chan string) {
-	w.wg.Add(1)
-	defer w.wg.Done()
+func (w FileWorker) Run(files chan string, chainSync *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
 
 	for file := range files {
 		w.handleFile(file)
 	}
-
-	log.Printf("Worker %s finished\n", w.name)
+	close(w.chain.Input)
+	chainSync.Wait()
+	log.Printf("FileWorker %s finished\n", w.name)
 }
 
-func (w *Worker) handleFile(file string) {
+func (w *FileWorker) handleFile(file string) {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Panic(err)
@@ -60,7 +62,7 @@ func (w *Worker) handleFile(file string) {
 	if r, err := pcapgo.NewReader(w.r); err != nil {
 		log.Panic(err)
 	} else {
-		log.Printf("Worker %s handles file %s\n", w.name, file)
+		log.Printf("FileWorker %s handles file %s\n", w.name, file)
 		filename := normalizeFilename(file)
 
 		for {
