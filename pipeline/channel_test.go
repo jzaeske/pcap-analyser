@@ -29,14 +29,18 @@ func (c *ChannelChain) run() {
 			}
 		}
 	}
+
+	if c.NextChain != nil {
+		close(c.NextChain.Reader)
+	}
 }
 
 func benchmarkChannel(length int, packetnum int, b *testing.B) {
-	var last *ChannelChain = &ChannelChain{Reader: make(chan *[]byte, 500)}
+	var last *ChannelChain = &ChannelChain{Reader: make(chan *[]byte, 250)}
 	var first = last
 	go first.run()
 	for i := 1; i < length; i++ {
-		last.NextChain = &ChannelChain{Reader: make(chan *[]byte, 500)}
+		last.NextChain = &ChannelChain{Reader: make(chan *[]byte, 250)}
 		last = last.NextChain
 		go last.run()
 	}
@@ -50,6 +54,8 @@ func benchmarkChannel(length int, packetnum int, b *testing.B) {
 		first.Reader <- &endMarker
 		channelSync.Wait()
 	}
+	b.StopTimer()
+	close(first.Reader)
 }
 
 // 1. fix packets, increasing elements
