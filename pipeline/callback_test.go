@@ -22,20 +22,20 @@ func (c *CallbackChain) run(data *[]byte) {
 }
 
 func benchmarkCallback(length int, packetnum int, b *testing.B) {
-	data := make([]byte, callbackPacketsize)
-
 	var last *CallbackChain = &CallbackChain{}
 	var first = last
 	for i := 1; i < length; i++ {
 		last.NextChain = &CallbackChain{}
 		last = last.NextChain
 	}
-	callbackSync.Add(packetnum)
 	b.ResetTimer()
-	for i := 0; i < packetnum; i++ {
-		first.run(&data)
+	for n := 0; n < b.N; n++ {
+		callbackSync.Add(packetnum)
+		for i := 0; i < packetnum; i++ {
+			first.run(&data)
+		}
+		callbackSync.Wait()
 	}
-	callbackSync.Wait()
 }
 
 // 1. fix packets, increasing elements

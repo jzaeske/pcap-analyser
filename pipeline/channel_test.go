@@ -9,6 +9,10 @@ var channelSync sync.WaitGroup = sync.WaitGroup{}
 
 var channelPacketsize = 200
 
+var endMarker = []byte{42}
+
+var data = make([]byte, channelPacketsize)
+
 type ChannelChain struct {
 	NextChain *ChannelChain
 	Reader    chan *[]byte
@@ -19,19 +23,15 @@ func (c *ChannelChain) run() {
 	for data := range c.Reader {
 		if c.NextChain != nil {
 			c.NextChain.Reader <- data
+		} else {
+			if data == &endMarker {
+				channelSync.Done()
+			}
 		}
 	}
-	if c.NextChain == nil {
-		channelSync.Done()
-	} else {
-		close(c.NextChain.Reader)
-	}
-
 }
 
 func benchmarkChannel(length int, packetnum int, b *testing.B) {
-	data := make([]byte, channelPacketsize)
-
 	var last *ChannelChain = &ChannelChain{Reader: make(chan *[]byte, 500)}
 	var first = last
 	go first.run()
@@ -40,13 +40,16 @@ func benchmarkChannel(length int, packetnum int, b *testing.B) {
 		last = last.NextChain
 		go last.run()
 	}
-	channelSync.Add(1)
+
 	b.ResetTimer()
-	for i := 0; i < packetnum; i++ {
-		first.Reader <- &data
+	for n := 0; n < b.N; n++ {
+		channelSync.Add(1)
+		for i := 0; i < packetnum; i++ {
+			first.Reader <- &data
+		}
+		first.Reader <- &endMarker
+		channelSync.Wait()
 	}
-	close(first.Reader)
-	channelSync.Wait()
 }
 
 // 1. fix packets, increasing elements
