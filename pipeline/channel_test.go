@@ -1,8 +1,8 @@
 package pipeline
 
 import (
-	"testing"
 	"sync"
+	"testing"
 )
 
 var channelSync sync.WaitGroup = sync.WaitGroup{}
@@ -24,7 +24,7 @@ func (c *ChannelChain) run() {
 	if c.NextChain == nil {
 		channelSync.Done()
 	} else {
-		close (c.NextChain.Reader)
+		close(c.NextChain.Reader)
 	}
 
 }
@@ -50,22 +50,21 @@ func benchmarkChannel(length int, packetnum int, b *testing.B) {
 }
 
 // 1. fix packets, increasing elements
-func BenchmarkChannel_10000_1000(b *testing.B) {benchmarkChannel(10000, 1000, b)}
-func BenchmarkChannel_20000_1000(b *testing.B) {benchmarkChannel(20000, 1000, b)}
-func BenchmarkChannel_30000_1000(b *testing.B) {benchmarkChannel(30000, 1000, b)}
-func BenchmarkChannel_40000_1000(b *testing.B) {benchmarkChannel(40000, 1000, b)}
-func BenchmarkChannel_50000_1000(b *testing.B) {benchmarkChannel(50000, 1000, b)}
-func BenchmarkChannel_60000_1000(b *testing.B) {benchmarkChannel(60000, 1000, b)}
-func BenchmarkChannel_70000_1000(b *testing.B) {benchmarkChannel(70000, 1000, b)}
-func BenchmarkChannel_80000_1000(b *testing.B) {benchmarkChannel(80000, 1000, b)}
-func BenchmarkChannel_90000_1000(b *testing.B) {benchmarkChannel(90000, 1000, b)}
-func BenchmarkChannel_100000_1000(b *testing.B) {benchmarkChannel(100000, 1000, b)}
-func BenchmarkChannel_1000000_1000(b *testing.B) {benchmarkChannel(1000000, 1000, b)}
+func BenchmarkChannel_10000_1000(b *testing.B)  { benchmarkChannel(10000, 1000, b) }
+func BenchmarkChannel_20000_1000(b *testing.B)  { benchmarkChannel(20000, 1000, b) }
+func BenchmarkChannel_30000_1000(b *testing.B)  { benchmarkChannel(30000, 1000, b) }
+func BenchmarkChannel_40000_1000(b *testing.B)  { benchmarkChannel(40000, 1000, b) }
+func BenchmarkChannel_50000_1000(b *testing.B)  { benchmarkChannel(50000, 1000, b) }
+func BenchmarkChannel_60000_1000(b *testing.B)  { benchmarkChannel(60000, 1000, b) }
+func BenchmarkChannel_70000_1000(b *testing.B)  { benchmarkChannel(70000, 1000, b) }
+func BenchmarkChannel_80000_1000(b *testing.B)  { benchmarkChannel(80000, 1000, b) }
+func BenchmarkChannel_90000_1000(b *testing.B)  { benchmarkChannel(90000, 1000, b) }
+func BenchmarkChannel_100000_1000(b *testing.B) { benchmarkChannel(100000, 1000, b) }
 
 // 2. fix elements, increasing packets
-func BenchmarkChannel_100_10000000(b *testing.B) {benchmarkChannel(100, 10000000, b)}
-func BenchmarkChannel_100_20000000(b *testing.B) {benchmarkChannel(100, 20000000, b)}
-func BenchmarkChannel_100_30000000(b *testing.B) {benchmarkChannel(100, 30000000, b)}
-func BenchmarkChannel_100_40000000(b *testing.B) {benchmarkChannel(100, 40000000, b)}
-func BenchmarkChannel_100_50000000(b *testing.B) {benchmarkChannel(100, 50000000, b)}
-func BenchmarkChannel_100_100000000(b *testing.B) {benchmarkChannel(100, 100000000, b)}
+func BenchmarkChannel_100_10000000(b *testing.B)  { benchmarkChannel(100, 10000000, b) }
+func BenchmarkChannel_100_20000000(b *testing.B)  { benchmarkChannel(100, 20000000, b) }
+func BenchmarkChannel_100_30000000(b *testing.B)  { benchmarkChannel(100, 30000000, b) }
+func BenchmarkChannel_100_40000000(b *testing.B)  { benchmarkChannel(100, 40000000, b) }
+func BenchmarkChannel_100_50000000(b *testing.B)  { benchmarkChannel(100, 50000000, b) }
+func BenchmarkChannel_100_100000000(b *testing.B) { benchmarkChannel(100, 100000000, b) }
