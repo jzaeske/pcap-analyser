@@ -2,14 +2,14 @@ package analyser
 
 import (
 	"./components"
-	"./report"
 	"encoding/csv"
 	"fmt"
 	"github.com/google/gopacket"
 	"log"
 	"os"
-	"sync"
+	"./chains"
 	"time"
+	"./report"
 )
 
 type PacketFilter interface {
@@ -19,15 +19,10 @@ type PacketFilter interface {
 	Input(<-chan gopacket.Packet)
 }
 
-type Worker interface {
-	Run(wg *sync.WaitGroup)
-	Acc() *report.Accumulator
-}
-
 type Analyzer struct {
 	pcaps       []string
 	workerCount int
-	workers     []Worker
+	workers     []components.FileWorker
 }
 
 func NewAnalyzer(pcaps []string, concurrentFiles int) (a *Analyzer) {
@@ -37,23 +32,17 @@ func NewAnalyzer(pcaps []string, concurrentFiles int) (a *Analyzer) {
 	return
 }
 
-func (a *Analyzer) Run(summary bool) {
+func (a *Analyzer) Run() {
 
 	start := time.Now()
 
 	var files = make(chan string)
-	var wg = sync.WaitGroup{}
 
 	for i := 0; i < a.workerCount; i++ {
-		var worker Worker
-		if summary {
-			worker = components.NewSummary(fmt.Sprintf("Worker %d", i), files)
-		} else {
-			worker = components.NewPcap(fmt.Sprintf("Worker %d", i), files)
-		}
-		wg.Add(1)
+		chain, wg := chains.GenerateExampleChain()
+		var worker = components.NewFileWorker(fmt.Sprintf("Worker %d", i), chain)
 		a.workers = append(a.workers, worker)
-		go worker.Run(&wg)
+		go worker.Run(files, wg)
 	}
 
 	for _, file := range a.pcaps {
@@ -61,9 +50,7 @@ func (a *Analyzer) Run(summary bool) {
 	}
 	close(files)
 
-	fmt.Println("Waiting for finished Workers")
-	wg.Wait()
-	fmt.Println("All done")
+	components.WaitForFileWorkers()
 
 	elapsed := time.Since(start)
 
@@ -77,13 +64,7 @@ func (a *Analyzer) ExportCsv(output string) {
 	f, _ := os.Create(output)
 	w := csv.NewWriter(f)
 
-	result := a.workers[0].Acc()
-	for i, w := range a.workers {
-		if i == 0 {
-			continue
-		}
-		result.Merge(*w.Acc())
-	}
+	result := report.GetJoinedAccumulator("_")
 
 	fmt.Println(result.Summary())
 

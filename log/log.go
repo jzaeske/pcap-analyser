@@ -1,4 +1,7 @@
-package report
+// Package log provides an extension to write default log to a log file, which may be specified via command line
+// argument -logFile. Import this module for its side effect with
+// import _ log
+package log
 
 import (
 	"log"
@@ -7,15 +10,16 @@ import (
 	"os"
 )
 
-var logFile string
+var file string
 
 func init() {
-	flag.StringVar(&logFile, "logFile", "", "File to write additional logs")
-	if file, err := os.Create(logFile); err != nil {
-		multiwriter := io.MultiWriter(os.Stderr, file)
-		log.SetOutput(multiwriter)
-	} else {
-		log.SetOutput(os.Stderr)
-		log.Println("No log File specified. Writing additional logs to stderr only.")
+	flag.StringVar(&file, "logFile", "", "File to write additional logs")
+	if file != "" {
+		if file, err := os.Create(file); err != nil {
+			multiWriter := io.MultiWriter(os.Stdout, file)
+			log.SetOutput(multiWriter)
+			return
+		}
 	}
+	log.Println("No log File specified. Writing additional logs to stdout only.")
 }

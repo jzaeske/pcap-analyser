@@ -15,7 +15,7 @@ type Counter struct {
 func NewCounter(ch Chain, pc PacketCounter) (c *Counter) {
 	return &Counter{
 		pc:     pc,
-		count:  report.NewAccumulator([]string{pc.ColumnIdentifier(), pc.ColumnIdentifier() + "Data"}),
+		count:  report.GenerateAccumulator("_"),
 		input:  *ch.Output(),
 		output: make(chan Measurement, 2000),
 	}
@@ -24,7 +24,7 @@ func NewCounter(ch Chain, pc PacketCounter) (c *Counter) {
 func NewCounterFromFilter(f *Filter, pc PacketCounter) (c *Counter) {
 	return &Counter{
 		pc:     pc,
-		count:  report.NewAccumulator([]string{pc.ColumnIdentifier(), pc.ColumnIdentifier() + "Data"}),
+		count:  report.GenerateAccumulator("_"),
 		input:  *f.No(),
 		output: make(chan Measurement, 2000),
 	}
