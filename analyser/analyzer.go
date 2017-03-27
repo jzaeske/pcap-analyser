@@ -1,15 +1,15 @@
 package analyser
 
 import (
+	"./chains"
 	"./components"
+	"./report"
 	"encoding/csv"
 	"fmt"
 	"github.com/google/gopacket"
 	"log"
 	"os"
-	"./chains"
 	"time"
-	"./report"
 )
 
 type PacketFilter interface {
@@ -39,7 +39,7 @@ func (a *Analyzer) Run() {
 	var files = make(chan string)
 
 	for i := 0; i < a.workerCount; i++ {
-		chain, wg := chains.GenerateExampleChain()
+		chain, wg := chains.GenerateExampleStat()
 		var worker = components.NewFileWorker(fmt.Sprintf("Worker %d", i), chain)
 		a.workers = append(a.workers, worker)
 		go worker.Run(files, wg)
