@@ -1,7 +1,10 @@
 package components
 
 import "github.com/google/gopacket"
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"github.com/google/gopacket/layers"
+)
 
 const bufferSize int = 128 * 1024 * 1024 // 128M
 
@@ -20,13 +23,8 @@ type Measurement struct {
 }
 
 type PacketCounter interface {
-	GroupKey(measurement Measurement) string
-	DataLen(measurement Measurement) int
+	GroupKey(measurement *Measurement) string
 	ColumnIdentifier() string
-}
-
-type FilterCriteria interface {
-	Decide(measurement Measurement) bool
 }
 
 type InOutFilter struct{}
@@ -44,12 +42,29 @@ type DayCounter struct {
 	Identifier string
 }
 
-func (d DayCounter) GroupKey(measurement Measurement) string {
+func (d DayCounter) GroupKey(measurement *Measurement) string {
 	return measurement.CaptureInfo.Timestamp.Format("2006/01/02")
-}
-func (d DayCounter) DataLen(measurement Measurement) int {
-	return len((*measurement.Packet).Data())
 }
 func (d DayCounter) ColumnIdentifier() string {
 	return d.Identifier
+}
+
+type IpCounter struct {
+	Identifier string
+	Reverse    bool
+}
+
+func (i IpCounter) GroupKey(measurement *Measurement) string {
+	ipLayer := (*measurement.Packet).Layer(layers.LayerTypeIPv4)
+	if ipLayer != nil {
+		ipPacket, _ := ipLayer.(*layers.IPv4)
+		if i.Reverse {
+			return ipPacket.SrcIP.String()
+		}
+		return ipPacket.DstIP.String()
+	}
+	return "_"
+}
+func (i IpCounter) ColumnIdentifier() string {
+	return i.Identifier
 }

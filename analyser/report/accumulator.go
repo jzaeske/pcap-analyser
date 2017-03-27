@@ -10,16 +10,17 @@ var accumulators map[string][]Accumulator
 
 type (
 	Accumulator struct {
-		acc     map[string]map[string]int
+		acc        map[string]map[string]int
+		identifier string
 	}
 )
 
-func GenerateAccumulator(identifier string) (Accumulator){
+func GenerateAccumulator(identifier string) Accumulator {
 	if accumulators == nil {
 		accumulators = make(map[string][]Accumulator)
 	}
 
-	accumulator := newAccumulator()
+	accumulator := newAccumulator(identifier)
 	if accs, ok := accumulators[identifier]; ok {
 		accumulators[identifier] = append(accs, accumulator)
 	} else {
@@ -28,7 +29,7 @@ func GenerateAccumulator(identifier string) (Accumulator){
 	return accumulator
 }
 
-func GetJoinedAccumulator(identifier string) (Accumulator){
+func GetJoinedAccumulator(identifier string) Accumulator {
 	if accs, ok := accumulators[identifier]; ok {
 		result := accs[0]
 		for i, acc := range accs {
@@ -39,11 +40,12 @@ func GetJoinedAccumulator(identifier string) (Accumulator){
 		}
 		return result
 	}
-	return newAccumulator()
+	return newAccumulator(identifier)
 }
 
-func newAccumulator() (a Accumulator) {
+func newAccumulator(identifier string) (a Accumulator) {
 	a.acc = make(map[string]map[string]int)
+	a.identifier = identifier
 	return
 }
 
@@ -86,7 +88,7 @@ func (a *Accumulator) Columns() (columns []string) {
 			colMap[column] = true
 		}
 	}
-	columns = make([]string, len (colMap))
+	columns = make([]string, len(colMap))
 	iterator := 0
 	for key := range colMap {
 		columns[iterator] = key
@@ -109,10 +111,11 @@ func (a *Accumulator) GetCsv() <-chan []string {
 	out := make(chan []string)
 	go func() {
 		// Header Row with column names
-		out <- append([]string{"date"}, a.Columns()...)
+		columns := a.Columns()
+		out <- append([]string{a.identifier}, columns...)
 		for date, row := range a.acc {
 			rowData := []string{date}
-			for _, column := range a.Columns() {
+			for _, column := range columns {
 				if column[0:4] == "date" {
 					date := time.Unix(int64(row[column]), 0)
 					rowData = append(rowData, date.Format("2006/01/02 15:04:05"))

@@ -1,15 +1,33 @@
 package components
 
+import (
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
+)
+
+func createBPFFromString(instruction string) (*pcap.BPF, error) {
+	if bpfInstructions, err := pcap.CompileBPFFilter(layers.LinkTypeEthernet, 65536, instruction); err != nil {
+		return nil, err
+	} else {
+		dummyHandle := pcap.Handle{}
+		if bpf, err := dummyHandle.NewBPFInstructionFilter(bpfInstructions); err != nil {
+			return nil, err
+		} else {
+			return bpf, nil
+		}
+	}
+}
+
 type Filter struct {
-	criteria FilterCriteria
+	criteria string
 	input    chan Measurement
 	output   chan Measurement
 	no       chan Measurement
 }
 
-func NewFilter(ch Chain, criteria FilterCriteria) (f *Filter) {
+func NewFilter(ch Chain, instructions string) (f *Filter) {
 	return &Filter{
-		criteria: criteria,
+		criteria: instructions,
 		input:    *ch.Output(),
 		output:   make(chan Measurement, 2000),
 		no:       make(chan Measurement, 2000),
@@ -27,12 +45,17 @@ func (f *Filter) No() *chan Measurement {
 func (f *Filter) Run() {
 	defer close(f.output)
 	defer close(f.no)
-	if f.input != nil {
-		for measurement := range f.input {
-			if f.criteria.Decide(measurement) {
-				f.output <- measurement
-			} else {
-				f.no <- measurement
+
+	if bpf, err := createBPFFromString(f.criteria); err != nil {
+		panic(err)
+	} else {
+		if f.input != nil {
+			for measurement := range f.input {
+				if bpf.Matches(*measurement.CaptureInfo, (*measurement.Packet).Data()) {
+					f.output <- measurement
+				} else {
+					f.no <- measurement
+				}
 			}
 		}
 	}

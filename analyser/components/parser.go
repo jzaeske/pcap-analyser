@@ -26,7 +26,7 @@ func (p *Parser) Run() {
 	defer close(p.output)
 	if p.Input != nil {
 		for unparsed := range p.Input {
-			packet := gopacket.NewPacket(*unparsed.Data, layers.LayerTypeEthernet, gopacket.Lazy)
+			packet := gopacket.NewPacket(*unparsed.Data, layers.LayerTypeEthernet, gopacket.NoCopy)
 			p.output <- Measurement{&packet, unparsed.CaptureInfo}
 		}
 	}
