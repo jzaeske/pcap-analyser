@@ -43,6 +43,14 @@ func GetJoinedAccumulator(identifier string) Accumulator {
 	return newAccumulator(identifier)
 }
 
+func GetIdentifiers() []string {
+	var identifers [] string
+	for ident := range accumulators {
+		identifers = append(identifers, ident)
+	}
+	return identifers
+}
+
 func newAccumulator(identifier string) (a Accumulator) {
 	a.acc = make(map[string]map[string]int)
 	a.identifier = identifier
@@ -50,7 +58,7 @@ func newAccumulator(identifier string) (a Accumulator) {
 }
 
 func (a *Accumulator) Merge(other Accumulator) {
-	merge.MergeMap2StringInt(&a.acc, &other.acc)
+	merge.Map2StringInt(&a.acc, &other.acc)
 }
 
 func (a *Accumulator) Increment(row string, column string) {
@@ -116,7 +124,7 @@ func (a *Accumulator) GetCsv() <-chan []string {
 		for date, row := range a.acc {
 			rowData := []string{date}
 			for _, column := range columns {
-				if column[0:4] == "date" {
+				if len(column) > 3 && column[0:4] == "date" {
 					date := time.Unix(int64(row[column]), 0)
 					rowData = append(rowData, date.Format("2006/01/02 15:04:05"))
 				} else {

@@ -1,7 +1,10 @@
 package components
 
 import (
+	. "../chains"
 	"bufio"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
 	"io"
 	"log"
@@ -9,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"strconv"
 )
 
 // TODO: Hier nicht so sinnvoll...
@@ -25,13 +29,13 @@ func WaitForFileWorkers() {
 }
 
 type FileWorker struct {
-	name     string
-	chain	 *Parser
-	r        *bufio.Reader
+	id    int
+	chain *Parser
+	r     *bufio.Reader
 }
 
-func NewFileWorker(name string, chain *Parser) (w FileWorker) {
-	w.name = name
+func NewFileWorker(id int, chain *Parser) (w FileWorker) {
+	w.id = id
 	w.chain = chain
 	return
 }
@@ -45,7 +49,7 @@ func (w FileWorker) Run(files chan string, chainSync *sync.WaitGroup) {
 	}
 	close(w.chain.Input)
 	chainSync.Wait()
-	log.Printf("FileWorker %s finished\n", w.name)
+	log.Printf("FileWorker %s finished\n", w.String())
 }
 
 func (w *FileWorker) handleFile(file string) {
@@ -55,18 +59,29 @@ func (w *FileWorker) handleFile(file string) {
 		return
 	}
 	defer f.Close()
-
+	var start = true
 	// add a large buffer between File Reader and gcapgo to reduce the amount of IO reads to the filesystem
-	w.r = bufio.NewReaderSize(f, bufferSize)
-
+	w.r = bufio.NewReaderSize(f, CHANNEL_BUFFER_SIZE)
 	if r, err := pcapgo.NewReader(w.r); err != nil {
 		log.Panic(err)
 	} else {
-		log.Printf("FileWorker %s handles file %s\n", w.name, file)
+		log.Printf("FileWorker %s handles file %s\n", w.String(), file)
 		filename := normalizeFilename(file)
+		count := 0
 
 		for {
 			data, ci, err := r.ReadPacketData()
+			count++
+			// TODO: do not hardcode exclude packets
+			if filename == "134.91.78.219.pcap" && count == 24820889 ||
+				filename == "134.91.78.217.pcap" && (count == 7752042 || count == 7947843) {
+				log.Println("Skipping known ill packet")
+				log.Println(count, time.Now())
+				log.Println(data)
+				log.Println(gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.Lazy))
+				continue
+			}
+
 			if err != nil {
 				if err == io.EOF {
 					// ok: that's usual
@@ -77,19 +92,28 @@ func (w *FileWorker) handleFile(file string) {
 					// file has only M < N bytes left. In this case the buffer will not get filled
 					// completely and pcapgo return an ErrUnexptectedEOF.
 					// Those packages should not be considered in an analysis.
-					log.Printf("File %s: has unexcepted EOF. Claimed package with %d bytes " +
-						"can not be filled completely and will be ignored in analysis.\n" +
+					log.Printf("File %s: has unexcepted EOF. Claimed package with %d bytes "+
+						"can not be filled completely and will be ignored in analysis.\n"+
 						"Package Data%v\n", filename, len(data), data)
 					break
 				} else {
+					log.Println("error orrured:", err)
 					break
 				}
 
 			}
-			w.chain.Input <- UnparsedMeasurement{&data, &ci}
 
+			w.chain.Input <- UnparsedMeasurement{&data, &ci, start}
+
+			if start == true {
+				start = false
+			}
 		}
 	}
+}
+
+func (f FileWorker) String() string {
+	return "Worker " + strconv.Itoa(f.id)
 }
 
 func normalizeFilename(filename string) string {

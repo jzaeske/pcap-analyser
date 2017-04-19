@@ -2,7 +2,7 @@ package components
 
 import (
 	"../../statistics"
-	"fmt"
+	. "../chains"
 )
 
 type Stat struct {
@@ -12,12 +12,12 @@ type Stat struct {
 	output chan Measurement
 }
 
-func NewStat(ch Chain, p float64) (c *Stat) {
+func NewStat(ch PacketChain, p float64) (c *Stat) {
 	return &Stat{
 		p2:     statistics.NewP2(p),
 		mean:   statistics.NewMean(),
 		input:  *ch.Output(),
-		output: make(chan Measurement, 2000),
+		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
 	}
 }
 
@@ -26,7 +26,7 @@ func NewStatFromFilter(f *Filter, p float64) (c *Stat) {
 		p2:     statistics.NewP2(p),
 		mean:   statistics.NewMean(),
 		input:  *f.No(),
-		output: make(chan Measurement, 2000),
+		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
 	}
 }
 
@@ -46,9 +46,5 @@ func (s *Stat) Run() {
 
 			s.output <- packet
 		}
-
-		fmt.Println(s.p2.Count())
-		fmt.Println(s.mean.Mean())
-		fmt.Println(s.p2.Values())
 	}
 }

@@ -1,7 +1,5 @@
 package config
 
-import "../components"
-
 type ChainStart struct {
 	File      string `xml:"file,omitempty`
 	Directory string `xml:"directory,omitempty"`
@@ -40,8 +38,4 @@ type Reader struct {
 
 func NewReader(file string) (r *Reader) {
 	return &Reader{configFile: file}
-}
-
-func (r *Reader) readChainFromConfig() (ch *components.Chain) {
-
 }

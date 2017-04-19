@@ -1,6 +1,7 @@
 package components
 
 import (
+	. "../chains"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
@@ -25,12 +26,12 @@ type Filter struct {
 	no       chan Measurement
 }
 
-func NewFilter(ch Chain, instructions string) (f *Filter) {
+func NewFilter(ch PacketChain, instructions string) (f *Filter) {
 	return &Filter{
 		criteria: instructions,
 		input:    *ch.Output(),
-		output:   make(chan Measurement, 2000),
-		no:       make(chan Measurement, 2000),
+		output:   make(chan Measurement, CHANNEL_BUFFER_SIZE),
+		no:       make(chan Measurement, CHANNEL_BUFFER_SIZE),
 	}
 }
 

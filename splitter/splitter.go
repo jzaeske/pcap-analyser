@@ -2,7 +2,6 @@ package splitter
 
 import (
 	"bufio"
-	"flag"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
@@ -13,10 +12,6 @@ import (
 )
 
 var outDir string
-
-func init() {
-	flag.StringVar(&outDir, "outDir", ".", "Output Directory for splitted Files")
-}
 
 type Splitter struct {
 	writer   map[string]*pcapgo.Writer
@@ -47,7 +42,7 @@ func (s *Splitter) handleFile(file string) {
 	}
 	defer f.Close()
 
-	_, net, _ := net.ParseCIDR(s.criteria)
+	_, network, _ := net.ParseCIDR(s.criteria)
 
 	// add a large buffer between File Reader and gcapgo to reduce the amount of IO reads to the filesystem
 	reader := bufio.NewReaderSize(f, 128*1024*1024)
@@ -82,9 +77,9 @@ func (s *Splitter) handleFile(file string) {
 			if ipLayer != nil {
 				ip, _ := ipLayer.(*layers.IPv4)
 
-				if net.Contains(ip.DstIP) {
+				if network.Contains(ip.DstIP) {
 					lookupIp = ip.DstIP.String()
-				} else if net.Contains(ip.SrcIP) {
+				} else if network.Contains(ip.SrcIP) {
 					lookupIp = ip.SrcIP.String()
 				} else {
 					// should not happen, but we don't know

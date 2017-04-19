@@ -5,7 +5,6 @@ import (
 	_ "./log"
 	"./splitter"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +17,7 @@ var inputFile string
 
 var inputPath string
 
-var reportFile string
+var reportDir string
 
 var concurrentFiles int
 
@@ -27,7 +26,7 @@ var split string
 func init() {
 	flag.StringVar(&inputFile, "inFile", "", "File to analyse")
 	flag.StringVar(&inputPath, "inDir", "", "Directory to scan for PCAP Files")
-	flag.StringVar(&reportFile, "outFile", "", "File to write report. If not set, stdout is used")
+	flag.StringVar(&reportDir, "outDir", "", "Dir to write reports")
 	flag.IntVar(&concurrentFiles, "concurrent", 1, "Number of PCAP Files parsed concurrently")
 	flag.StringVar(&split, "split", "", "Split the input files on the defined criteria")
 }
@@ -46,7 +45,7 @@ func main() {
 		}
 		pcapList = []string{inputFile}
 	} else if inputPath != "" {
-		fmt.Println(inputPath)
+		log.Println(inputPath)
 		stat, err := os.Stat(inputPath)
 		if err != nil {
 			log.Fatalf("Error occured: %s\n", err)
@@ -68,11 +67,11 @@ func main() {
 	} else {
 		analyzer := analyser.NewAnalyzer(pcapList, concurrentFiles)
 		analyzer.Run()
-		analyzer.ExportCsv(reportFile)
+		analyzer.ExportCsv(reportDir)
 	}
 
 	elapsed := time.Since(start)
-	fmt.Printf("Took: %s\n", elapsed)
+	log.Printf("Took: %s\n", elapsed)
 }
 
 type ByFileSize []os.FileInfo
