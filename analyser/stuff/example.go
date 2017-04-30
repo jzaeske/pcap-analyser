@@ -59,11 +59,17 @@ func GenerateExampleComposer() (chain *com.Parser, wg *sync.WaitGroup) {
 	go c.Run()
 	tcpCounter := com.NewStreamCounter(c, cl.PortClassifier{Identifier: "stream"})
 	go tcpCounter.Run()
-	ep := com.NewEndpoint(tcpCounter, wg)
+	bsFilter := com.NewBackscatterFilter(tcpCounter)
+	go bsFilter.Run()
+	bsCounter := com.NewStreamCounter(bsFilter, cl.PortClassifier{Identifier: "bs", Reverse: true})
+	go bsCounter.Run()
+	ep := com.NewEndpoint(bsCounter, wg)
 	go ep.Run(com.EP_PRIMARY)
 	pc := com.NewPacketCounterFromStreamChain(c, cl.PortClassifier{Identifier: "udp"}, layers.LayerTypeUDP)
 	go pc.Run()
 	ep2 := com.NewEndpoint(pc, wg)
 	go ep2.Run(com.EP_PRIMARY)
+	ep3 := com.NewEndpoint(bsFilter, wg)
+	go ep3.Run(com.EP_SECONDARY)
 	return
 }

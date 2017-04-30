@@ -34,9 +34,19 @@ func NewEndpoint(ch interface{}, group *sync.WaitGroup) (e *Endpoint) {
 			},
 			func() {
 				defer e.group.Done()
-				for elem := range *ch.(StreamChain).Other() {
-					(func(elem Measurement) {})(elem)
+				switch ch.(StreamChain).Other().(type) {
+				case *chan Measurement:
+					other := ch.(StreamChain).Other().(*chan Measurement)
+					for elem := range *other {
+						(func(elem Measurement) {})(elem)
+					}
+				case *chan TCPStream:
+					other := ch.(StreamChain).Other().(*chan TCPStream)
+					for elem := range *other {
+						(func(elem TCPStream) {})(elem)
+					}
 				}
+
 			},
 		}
 	case *Filter:

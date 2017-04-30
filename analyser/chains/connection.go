@@ -11,7 +11,7 @@ const HEADER_LIMIT = 20
 
 type StreamChain interface {
 	Output() *chan TCPStream
-	Other() *chan Measurement
+	Other() interface{}
 }
 
 type TCPStream struct {

@@ -1,7 +1,10 @@
 package classifier
 
+import . "../chains"
+
 type PortClassifier struct {
 	Identifier string
+	Reverse    bool
 }
 
 // General Classifier
@@ -19,6 +22,9 @@ func (PortClassifier) GroupName() string {
 func (p PortClassifier) GroupKey(measurement *Measurement) string {
 	transportLayer := (*measurement.Packet).TransportLayer()
 	if transportLayer != nil {
+		if p.Reverse {
+			return transportLayer.TransportFlow().Src().String()
+		}
 		return transportLayer.TransportFlow().Dst().String()
 	}
 	return UNCLASSIFIED
@@ -27,6 +33,9 @@ func (p PortClassifier) GroupKey(measurement *Measurement) string {
 func (p PortClassifier) MetaGroup(measurement *Measurement) string {
 	networkLayer := (*measurement.Packet).NetworkLayer()
 	if networkLayer != nil {
+		if p.Reverse {
+			return networkLayer.NetworkFlow().Src().String()
+		}
 		return networkLayer.NetworkFlow().Dst().String()
 	}
 	return UNCLASSIFIED
@@ -35,9 +44,15 @@ func (p PortClassifier) MetaGroup(measurement *Measurement) string {
 // Stream Classifier
 
 func (p PortClassifier) GroupKeyStream(stream *TCPStream) string {
+	if p.Reverse {
+		return stream.Transport.Src().String()
+	}
 	return stream.Transport.Dst().String()
 }
 
 func (p PortClassifier) MetaGroupStream(stream *TCPStream) string {
+	if p.Reverse {
+		return stream.Network.Src().String()
+	}
 	return stream.Network.Dst().String()
 }

@@ -9,10 +9,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"strconv"
 )
 
 // TODO: Hier nicht so sinnvoll...
@@ -74,7 +74,7 @@ func (w *FileWorker) handleFile(file string) {
 			count++
 			// TODO: do not hardcode exclude packets
 			if filename == "134.91.78.219.pcap" && count == 24820889 ||
-				filename == "134.91.78.217.pcap" && (count == 7752042 || count == 7947843) {
+				filename == "134.91.78.217.pcap" && (count == 7752042 || count == 7947843 || count == 7947844) {
 				log.Println("Skipping known ill packet")
 				log.Println(count, time.Now())
 				log.Println(data)

@@ -26,6 +26,12 @@ type Filter struct {
 	no       chan Measurement
 }
 
+type BackscatterFilter struct {
+	input  chan TCPStream
+	output chan TCPStream
+	other  chan TCPStream
+}
+
 func NewFilter(ch PacketChain, instructions string) (f *Filter) {
 	return &Filter{
 		criteria: instructions,
@@ -60,4 +66,36 @@ func (f *Filter) Run() {
 			}
 		}
 	}
+}
+
+func NewBackscatterFilter(ch StreamChain) (b *BackscatterFilter) {
+	return &BackscatterFilter{
+		input:  *ch.Output(),
+		output: make(chan TCPStream, CHANNEL_BUFFER_SIZE),
+		other:  make(chan TCPStream, CHANNEL_BUFFER_SIZE),
+	}
+}
+
+func (b *BackscatterFilter) Output() *chan TCPStream {
+	return &b.output
+}
+
+func (b *BackscatterFilter) Other() interface{} {
+	return &b.other
+}
+
+func (b *BackscatterFilter) Run() {
+	defer close(b.output)
+	defer close(b.other)
+
+	if b.input != nil {
+		for stream := range b.input {
+			if stream.Handshake[0] == false {
+				b.output <- stream
+			} else {
+				b.other <- stream
+			}
+		}
+	}
+
 }

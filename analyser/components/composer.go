@@ -52,7 +52,7 @@ func (c *Composer) Output() *chan TCPStream {
 	return &c.output
 }
 
-func (c *Composer) Other() *chan Measurement {
+func (c *Composer) Other() interface{} {
 	return &c.other
 }
 

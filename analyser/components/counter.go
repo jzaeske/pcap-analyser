@@ -5,6 +5,7 @@ import (
 	"../classifier"
 	"../report"
 	"github.com/google/gopacket"
+	"log"
 )
 
 type PacketCounter struct {
@@ -37,12 +38,19 @@ func NewPacketCounterFromFilter(f *Filter, pc classifier.PacketClassifier, layer
 }
 
 func NewPacketCounterFromStreamChain(s StreamChain, pc classifier.PacketClassifier, layer gopacket.LayerType) (c *PacketCounter) {
-	return &PacketCounter{
-		pc:     pc,
-		layer:  layer,
-		count:  report.GenerateAccumulator(pc.GroupName()),
-		input:  *s.Other(),
-		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
+	switch s.Other().(type) {
+	case *chan Measurement:
+		other := s.Other().(*chan Measurement)
+		return &PacketCounter{
+			pc:     pc,
+			layer:  layer,
+			count:  report.GenerateAccumulator(pc.GroupName()),
+			input:  *other,
+			output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
+		}
+	default:
+		log.Fatalln("Packet chain on none-packet source")
+		return nil
 	}
 }
 
@@ -89,7 +97,7 @@ func (c *StreamCounter) Output() *chan TCPStream {
 	return &c.output
 }
 
-func (c *StreamCounter) Other() *chan Measurement {
+func (c *StreamCounter) Other() interface{} {
 	return nil
 }
 
