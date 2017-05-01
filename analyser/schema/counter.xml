@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<AnalysisConfig xmlns="http://vs.uni-due.de/pcap-analyser">
+    <Components>
+        <Parser id="parser"/>
+        <Filter id="inout" bpf="ether dst 00:0c:29:02:7b:e7"/>
+        <PacketCounter id="count-in" layer="17">
+            <Ip4Classifier identifier="ethIn" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="count-ip" layer="20">
+            <Ip4Classifier identifier="ipIn" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="count-tcp" layer="44">
+            <Ip4Classifier identifier="tcpIn" reverse="false"/>
+        </PacketCounter>
+        <Filter id="tcp-synack" bpf="tcp[13] &amp; 0x12 = 18"/>
+        <PacketCounter id="count-synack" layer="44">
+            <Ip4Classifier identifier="synAck" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="out" layer="17">
+            <Ip4Classifier identifier="ethOut" reverse="true"/>
+        </PacketCounter>
+    </Components>
+    <Connect output="FILE" input="parser"/>
+    <Connect output="parser" input="inout"/>
+    <Connect output="inout" input="count-in"/>
+    <Connect output="count-in" input="count-ip"/>
+    <Connect output="count-ip" input="count-tcp"/>
+    <Connect output="count-tcp" input="tcp-synack"/>
+    <Connect output="tcp-synack" input="count-synack"/>
+    <Connect no="inout" input="out"/>
+    <Settings>
+        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test</Input>
+        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/local-counter</Output>
+        <Concurrent>2</Concurrent>
+        <LogFile>/tmp/pcap.log</LogFile>
+    </Settings>
+</AnalysisConfig>

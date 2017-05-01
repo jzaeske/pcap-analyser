@@ -6,28 +6,39 @@ import (
 )
 
 type Stat struct {
-	p2     *statistics.P2
-	mean   *statistics.Mean
-	input  chan Measurement
-	output chan Measurement
+	Id        string  `xml:"id,attr"`
+	P         float64 `xml:"p,attr"`
+	p2        *statistics.P2
+	mean      *statistics.Mean
+	input     chan Measurement
+	output    chan Measurement
+	pubOutput bool
 }
 
-func NewStat(ch PacketChain, p float64) (c *Stat) {
-	return &Stat{
-		p2:     statistics.NewP2(p),
-		mean:   statistics.NewMean(),
-		input:  *ch.Output(),
-		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
-	}
+func (s *Stat) ComId() string {
+	return s.Id
 }
 
-func NewStatFromFilter(f *Filter, p float64) (c *Stat) {
-	return &Stat{
-		p2:     statistics.NewP2(p),
-		mean:   statistics.NewMean(),
-		input:  *f.No(),
-		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
+func (s *Stat) Init() {
+	s.p2 = statistics.NewP2(s.P)
+	s.mean = statistics.NewMean()
+	s.output = make(chan Measurement, CHANNEL_BUFFER_SIZE)
+}
+
+func (s *Stat) OpenChannels() []interface{} {
+	var open = []interface{}{}
+	if !s.pubOutput {
+		open = append(open, &s.output)
 	}
+	return open
+}
+
+func (s *Stat) Copy() Component {
+	return &Stat{Id: s.Id, P: s.P}
+}
+
+func (s *Stat) Input(input *chan Measurement) {
+	s.input = *input
 }
 
 func (s *Stat) Output() *chan Measurement {

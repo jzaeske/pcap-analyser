@@ -5,7 +5,7 @@ import . "../chains"
 const DATE_FORMAT = "2006/01/02"
 
 type DayClassifier struct {
-	Identifier string
+	Identifier string `xml:"identifier,attr"`
 }
 
 // General Classifier

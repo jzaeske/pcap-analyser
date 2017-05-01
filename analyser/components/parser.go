@@ -9,28 +9,43 @@ import (
 var ParserOptions = gopacket.DecodeOptions{Lazy: true}
 
 type Parser struct {
-	Id     int `xml:"id,attr"`
-	Input  chan UnparsedMeasurement
-	output chan Measurement
+	Id        string `xml:"id,attr"`
+	Input     chan UnparsedMeasurement
+	output    chan Measurement
+	pubOutput bool
 }
 
-func NewParser(in *chan UnparsedMeasurement) (p *Parser) {
-	return &Parser{
-		Input:  *in,
-		output: make(chan Measurement, CHANNEL_BUFFER_SIZE),
-	}
+func (p *Parser) Copy() Component {
+	return &Parser{Id: p.Id}
+}
+
+func (p *Parser) Init() {
+	p.output = make(chan Measurement, CHANNEL_BUFFER_SIZE)
+}
+
+func (p *Parser) ComId() string {
+	return p.Id
 }
 
 func (p *Parser) Output() *chan Measurement {
+	p.pubOutput = true
 	return &p.output
 }
 
+func (p *Parser) OpenChannels() []interface{} {
+	var open = []interface{}{}
+	if !p.pubOutput {
+		open = append(open, &p.output)
+	}
+	return open
+}
+
 func (p *Parser) Run() {
-	defer close(p.output)
 	if p.Input != nil {
 		for unparsed := range p.Input {
 			packet := gopacket.NewPacket(*unparsed.Data, layers.LayerTypeEthernet, ParserOptions)
 			p.output <- Measurement{Packet: &packet, CaptureInfo: unparsed.CaptureInfo, Start: unparsed.Start}
 		}
 	}
+	defer close(p.output)
 }

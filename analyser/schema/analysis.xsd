@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://vs.uni-due.de/pcap-analyser">
+
+    <xs:element name="AnalysisConfig" type="AnalysisConfig"/>
+
+    <xs:complexType name="AnalysisConfig">
+        <xs:choice>
+            <xs:element name="Components" type="Components"/>
+            <xs:element name="Connect" type="Connect" minOccurs="1"/>
+            <xs:element name="Settings" type="Settings" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="SpecialPackets" type="SpecialPackets" minOccurs="0" maxOccurs="1"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <!-- Pipeline Components defined in package components -->
+    <xs:complexType name="Components">
+        <xs:choice minOccurs="1" maxOccurs="unbounded">
+            <xs:element type="Parser" name="Parser"/>
+            <xs:element type="Composer" name="Composer"/>
+            <xs:element type="StreamCounter" name="StreamCounter"/>
+            <xs:element type="PacketCounter" name="PacketCounter"/>
+            <xs:element type="BackscatterFilter" name="BackscatterFilter"/>
+            <xs:element type="Filter" name="Filter"/>
+            <xs:element type="Stat" name="Stat"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="Parser">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="Composer">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="keepPayload" type="xs:boolean" use="optional" default="false"/>
+    </xs:complexType>
+    <xs:complexType name="StreamCounter">
+        <xs:choice minOccurs="1" maxOccurs="1">
+            <xs:element type="PortClassifier" name="PortClassifier"/>
+            <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+            <xs:element type="DateClassifier" name="DateClassifier"/>
+        </xs:choice>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="PacketCounter">
+        <xs:choice minOccurs="1" maxOccurs="1">
+            <xs:element type="PortClassifier" name="PortClassifier"/>
+            <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+            <xs:element type="DateClassifier" name="DateClassifier"/>
+        </xs:choice>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="layer" type="xs:int" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="BackscatterFilter">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="Filter">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="bpf" type="xs:string"/>
+    </xs:complexType>
+    <xs:complexType name="Stat">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="p" type="xs:float" use="required"/>
+    </xs:complexType>
+
+    <!-- Classifier for Packets and Streams. Defined in package classifier -->
+
+    <xs:complexType name="PortClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="reverse" type="xs:boolean" use="optional"/>
+    </xs:complexType>
+    <xs:complexType name="Ip4Classifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="reverse" type="xs:boolean" use="optional"/>
+    </xs:complexType>
+    <xs:complexType name="DateClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="Connect">
+        <xs:attribute name="input" type="xs:string" use="required"/>
+        <xs:attribute name="output" type="xs:string"/>
+        <xs:attribute name="other" type="xs:string"/>
+        <xs:attribute name="no" type="xs:string"/>
+    </xs:complexType>
+
+    <!-- General Settings. Part of Configuration in package analyser -->
+
+    <xs:complexType name="Settings">
+        <xs:choice>
+            <xs:element name="Input" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="Output" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="Concurrent" type="xs:int" default="1"/>
+            <xs:element name="LogFile" type="xs:string"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="SpecialPackets">
+        <xs:sequence minOccurs="1">
+            <xs:element name="Skip" type="Skip"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="Skip">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="packetNumber" type="xs:int" use="required"/>
+    </xs:complexType>
+</xs:schema>

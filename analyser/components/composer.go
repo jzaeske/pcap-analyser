@@ -14,14 +14,17 @@ var moveDuration, _ = time.ParseDuration("30s")
 var deleteDuration, _ = time.ParseDuration("-1m")
 
 type Composer struct {
+	Id           string `xml:"id,attr"`
 	counter      report.Accumulator
 	input        chan Measurement
 	output       chan TCPStream
 	other        chan Measurement
+	pubOutput    bool
+	pubOther     bool
 	defragmenter *ip4defrag.IPv4Defragmenter
 	assembler    *r.Assembler
 	pool         *r.StreamPool
-	keepPayload  bool
+	KeepPayload  bool `xml:"keepPayload,attr"`
 }
 
 type tcpContext gopacket.CaptureInfo
@@ -30,30 +33,44 @@ func (c tcpContext) GetCaptureInfo() gopacket.CaptureInfo {
 	return gopacket.CaptureInfo(c)
 }
 
-func NewComposer(ch PacketChain, keepPayload bool) (c *Composer) {
-	c = &Composer{
-		input:       *ch.Output(),
-		output:      make(chan TCPStream),
-		other:       make(chan Measurement, CHANNEL_BUFFER_SIZE),
-		keepPayload: keepPayload,
-		counter:     report.GenerateAccumulator("reassembly"),
-	}
-	c.resetAssembler()
-	return
+func (c *Composer) Copy() Component {
+	return &Composer{Id: c.Id, KeepPayload: c.KeepPayload}
 }
 
-func (c *Composer) resetAssembler() {
-	c.defragmenter = ip4defrag.NewIPv4Defragmenter()
-	c.pool = r.NewStreamPool(TCPStreamFactory{Next: c.Output(), KeepPayload: c.keepPayload})
-	c.assembler = r.NewAssembler(c.pool)
+func (c *Composer) Init() {
+	c.output = make(chan TCPStream, CHANNEL_BUFFER_SIZE)
+	c.other = make(chan Measurement, CHANNEL_BUFFER_SIZE)
+	c.counter = report.GenerateAccumulator("reassembly")
+	c.resetAssembler()
+}
+
+func (c *Composer) ComId() string {
+	return c.Id
+}
+
+func (c *Composer) Input(input *chan Measurement) {
+	c.input = *input
 }
 
 func (c *Composer) Output() *chan TCPStream {
+	c.pubOutput = true
 	return &c.output
 }
 
 func (c *Composer) Other() interface{} {
+	c.pubOther = true
 	return &c.other
+}
+
+func (c *Composer) OpenChannels() []interface{} {
+	var open = []interface{}{}
+	if !c.pubOutput {
+		open = append(open, &c.output)
+	}
+	if !c.pubOther {
+		open = append(open, &c.other)
+	}
+	return open
 }
 
 func (c *Composer) Run() {
@@ -72,7 +89,7 @@ func (c *Composer) Run() {
 				c.resetAssembler()
 			}
 
-			// Get IP and TCP Layer. If both present, reassemble the tcp stream
+			// Get IP and TCP layer. If both present, reassemble the tcp stream
 			// if not, put the packet into the secondary channel
 			if ipLayer := (*packet.Packet).Layer(layers.LayerTypeIPv4); ipLayer != nil {
 				ipPacket := ipLayer.(*layers.IPv4)
@@ -124,4 +141,10 @@ func (c *Composer) Run() {
 		}
 		c.assembler.FlushAll()
 	}
+}
+
+func (c *Composer) resetAssembler() {
+	c.defragmenter = ip4defrag.NewIPv4Defragmenter()
+	c.pool = r.NewStreamPool(TCPStreamFactory{Next: c.Output(), KeepPayload: c.KeepPayload})
+	c.assembler = r.NewAssembler(c.pool)
 }

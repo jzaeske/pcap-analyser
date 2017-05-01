@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<AnalysisConfig xmlns="http://vs.uni-due.de/pcap-analyser">
+    <Components>
+        <Parser id="parser"/>
+        <Composer id="tcp-assembly" keepPayload="false"/>
+        <StreamCounter id="tcp-count">
+            <PortClassifier identifier="stream"/>
+        </StreamCounter>
+        <BackscatterFilter id="filter-backscatter"/>
+        <StreamCounter id="count-backscatter">
+            <PortClassifier identifier="bs" reverse="true"/>
+        </StreamCounter>
+        <PacketCounter id="no-tcp" layer="LayerTypeUDP">
+            <PortClassifier identifier="udp"/>
+        </PacketCounter>
+    </Components>
+    <Connect output="FILE" input="parser"/>
+    <Connect output="parser" input="tcp-assembly"/>
+    <Connect output="tcp-assembly" input="tcp-count"/>
+    <Connect output="tcp-count" input="filter-backscatter"/>
+    <Connect output="filter-backscatter" input="count-backscatter"/>
+    <Connect other="tcp-assembly" input="no-tcp"/>
+    <Settings>
+        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test</Input>
+        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/local/</Output>
+        <Concurrent>2</Concurrent>
+        <LogFile>/tmp/pcap.log</LogFile>
+    </Settings>
+    <SpecialPackets>
+        <Skip file="134.91.78.217.pcap" packetNumber="7752042"/>
+        <Skip file="134.91.78.217.pcap" packetNumber="7947843"/>
+        <Skip file="134.91.78.217.pcap" packetNumber="7947844"/>
+        <Skip file="134.91.78.219.pcap" packetNumber="24820889"/>
+    </SpecialPackets>
+</AnalysisConfig>

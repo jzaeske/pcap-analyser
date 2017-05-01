@@ -14,6 +14,10 @@ type StreamChain interface {
 	Other() interface{}
 }
 
+type StreamInput interface {
+	Input(*chan TCPStream)
+}
+
 type TCPStream struct {
 	// Markers for SYN, SYN-ACK, ACK of TCP Handshake
 	Handshake []bool
@@ -23,7 +27,7 @@ type TCPStream struct {
 	Headers               []*layers.TCP
 	headerAdditionalBytes int
 	headerAdditionalCount int
-	// Recieved Payload
+	// Received Payload
 	Payload      []byte
 	keepPayload  bool
 	payloadBytes int
@@ -103,9 +107,6 @@ func (s *TCPStream) ReassembledSG(sg r.ScatterGather, ac r.AssemblerContext) {
 }
 
 func (s *TCPStream) ReassemblyComplete(ac r.AssemblerContext) bool {
-	// TODO: Hier könnte das Problem liegen. In Verbindung mit Mutex im Flush
-	// Mutex verhindert, dass der Reciever kommt und mehr closes als Buffer
-	// blocken.
 	*s.next <- *s
 	return false
 }

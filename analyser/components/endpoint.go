@@ -6,87 +6,45 @@ import (
 	"sync"
 )
 
-const (
-	EP_PRIMARY   = 0
-	EP_SECONDARY = 1
-	EP_ALL       = 2
-)
-
 type Endpoint struct {
-	Id    int `xml:"id,attr"`
-	Input chan interface{}
 	empty []func()
-	group *sync.WaitGroup
+	Group *sync.WaitGroup
 }
 
-func NewEndpoint(ch interface{}, group *sync.WaitGroup) (e *Endpoint) {
-	ep := &Endpoint{
-		group: group,
-	}
-	switch t := ch.(type) {
-	case StreamChain:
-		ep.empty = []func(){
-			func() {
-				defer e.group.Done()
-				for elem := range *ch.(StreamChain).Output() {
-					(func(elem TCPStream) {})(elem)
-				}
-			},
-			func() {
-				defer e.group.Done()
-				switch ch.(StreamChain).Other().(type) {
-				case *chan Measurement:
-					other := ch.(StreamChain).Other().(*chan Measurement)
-					for elem := range *other {
-						(func(elem Measurement) {})(elem)
-					}
-				case *chan TCPStream:
-					other := ch.(StreamChain).Other().(*chan TCPStream)
-					for elem := range *other {
+func (e *Endpoint) AddComponent(ch Component) {
+	for _, open := range ch.OpenChannels() {
+		switch t := open.(type) {
+		case *chan TCPStream:
+			{
+				e.empty = append(e.empty, func() {
+					defer e.Group.Done()
+					channel := open.(*chan TCPStream)
+					for elem := range *channel {
 						(func(elem TCPStream) {})(elem)
 					}
-				}
-
-			},
+				})
+			}
+		case *chan Measurement:
+			{
+				e.empty = append(e.empty, func() {
+					defer e.Group.Done()
+					channel := open.(*chan Measurement)
+					for elem := range *channel {
+						(func(elem Measurement) {})(elem)
+					}
+				})
+			}
+		default:
+			log.Fatalf("%s is not a valid endpoint channel", t)
 		}
-	case *Filter:
-		ep.empty = []func(){
-			func() {
-				defer e.group.Done()
-				for elem := range *ch.(*Filter).Output() {
-					(func(elem Measurement) {})(elem)
-				}
-			},
-			func() {
-				defer e.group.Done()
-				for elem := range *ch.(*Filter).No() {
-					(func(elem Measurement) {})(elem)
-				}
-			},
-		}
-	case PacketChain:
-		ep.empty = []func(){
-			func() {
-				defer e.group.Done()
-				for elem := range *ch.(PacketChain).Output() {
-					(func(elem Measurement) {})(elem)
-				}
-			},
-		}
-	default:
-		log.Println(t)
 	}
-
-	return ep
 }
 
-func (e *Endpoint) Run(endpointMode int) {
+func (e *Endpoint) Run() {
 	if e.empty != nil {
-		for i, em := range e.empty {
-			if i == endpointMode || endpointMode == EP_ALL {
-				e.group.Add(1)
-				go em()
-			}
+		for _, em := range e.empty {
+			e.Group.Add(1)
+			go em()
 		}
 	}
 }

@@ -3,7 +3,6 @@ package analyser
 import (
 	"./components"
 	"./report"
-	"./stuff"
 	"encoding/csv"
 	"log"
 	"os"
@@ -11,15 +10,13 @@ import (
 )
 
 type Analyzer struct {
-	pcaps       []string
-	workerCount int
-	workers     []components.FileWorker
+	config  *AnalysisConfig
+	workers []components.FileWorker
 }
 
-func NewAnalyzer(pcaps []string, concurrentFiles int) (a *Analyzer) {
+func NewAnalyzer(config *AnalysisConfig) (a *Analyzer) {
 	a = &Analyzer{}
-	a.pcaps = pcaps
-	a.workerCount = concurrentFiles
+	a.config = config
 	return
 }
 
@@ -29,15 +26,19 @@ func (a *Analyzer) Run() {
 
 	var files = make(chan string)
 
-	for i := 0; i < a.workerCount; i++ {
-		chain, wg := stuff.GenerateExampleComposer()
-		var worker = components.NewFileWorker(i, chain)
+	for i := 0; i < a.config.Settings.Concurrent; i++ {
+		chain, wg := a.config.GetChain()
+		var worker = components.NewFileWorker(i, chain, &a.config.SpecialPackets)
 		a.workers = append(a.workers, worker)
 		go worker.Run(files, wg)
 	}
 
-	for _, file := range a.pcaps {
-		files <- file
+	if pcaps, err := a.config.GetInputFiles(); err == nil {
+		for _, file := range pcaps {
+			files <- file
+		}
+	} else {
+		log.Fatalln(err)
 	}
 	close(files)
 
@@ -49,7 +50,8 @@ func (a *Analyzer) Run() {
 
 }
 
-func (a *Analyzer) ExportCsv(outputDir string) {
+func (a *Analyzer) ExportCsv() {
+	outputDir := a.config.Settings.Output
 	log.Println("Writing report")
 
 	if err := os.MkdirAll(outputDir, 0777); err != nil {

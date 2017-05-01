@@ -3,8 +3,8 @@ package classifier
 import . "../chains"
 
 type PortClassifier struct {
-	Identifier string
-	Reverse    bool
+	Identifier string `xml:"identifier,attr"`
+	Reverse    bool   `xml:"reverse,attr"`
 }
 
 // General Classifier

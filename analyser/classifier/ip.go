@@ -7,8 +7,8 @@ import (
 )
 
 type Ip4Classifier struct {
-	Identifier string
-	Reverse    bool
+	Identifier string `xml:"identifier,attr"`
+	Reverse    bool   `xml:"reverse,attr"`
 	CIDR       int
 	mask       net.IPMask
 }

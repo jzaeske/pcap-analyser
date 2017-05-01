@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<AnalysisConfig xmlns="http://vs.uni-due.de/pcap-analyser">
+    <Components>
+        <Parser id="parser"/>
+        <Stat id="stat" p="0.5"/>
+    </Components>
+    <Connect output="FILE" input="parser"/>
+    <Connect output="parser" input="stat"/>
+    <Settings>
+        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test</Input>
+        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/out-stat</Output>
+        <Concurrent>2</Concurrent>
+        <LogFile>/tmp/pcap.log</LogFile>
+    </Settings>
+</AnalysisConfig>

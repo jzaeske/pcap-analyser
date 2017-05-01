@@ -32,11 +32,13 @@ type FileWorker struct {
 	id    int
 	chain *Parser
 	r     *bufio.Reader
+	skip  PacketSkipper
 }
 
-func NewFileWorker(id int, chain *Parser) (w FileWorker) {
+func NewFileWorker(id int, chain *Parser, skip PacketSkipper) (w FileWorker) {
 	w.id = id
 	w.chain = chain
+	w.skip = skip
 	return
 }
 
@@ -72,9 +74,7 @@ func (w *FileWorker) handleFile(file string) {
 		for {
 			data, ci, err := r.ReadPacketData()
 			count++
-			// TODO: do not hardcode exclude packets
-			if filename == "134.91.78.219.pcap" && count == 24820889 ||
-				filename == "134.91.78.217.pcap" && (count == 7752042 || count == 7947843 || count == 7947844) {
+			if w.skip.IsSkip(filename, count) {
 				log.Println("Skipping known ill packet")
 				log.Println(count, time.Now())
 				log.Println(data)
