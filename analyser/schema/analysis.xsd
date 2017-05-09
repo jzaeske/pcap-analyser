@@ -34,18 +34,18 @@
         <xs:attribute name="keepPayload" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
     <xs:complexType name="StreamCounter">
-        <xs:choice minOccurs="1" maxOccurs="1">
+        <xs:choice minOccurs="1" maxOccurs="2">
             <xs:element type="PortClassifier" name="PortClassifier"/>
             <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
-            <xs:element type="DateClassifier" name="DateClassifier"/>
+            <xs:element type="DayClassifier" name="DayClassifier"/>
         </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="PacketCounter">
-        <xs:choice minOccurs="1" maxOccurs="1">
+        <xs:choice minOccurs="1" maxOccurs="2">
             <xs:element type="PortClassifier" name="PortClassifier"/>
             <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
-            <xs:element type="DateClassifier" name="DateClassifier"/>
+            <xs:element type="DayClassifier" name="DayClassifier"/>
         </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="layer" type="xs:int" use="required"/>
@@ -72,8 +72,9 @@
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="reverse" type="xs:boolean" use="optional"/>
     </xs:complexType>
-    <xs:complexType name="DateClassifier">
+    <xs:complexType name="DayClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="format" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="Connect">
         <xs:attribute name="input" type="xs:string" use="required"/>

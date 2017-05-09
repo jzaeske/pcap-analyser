@@ -12,20 +12,22 @@ import (
 type PacketCounter struct {
 	Id        string `xml:"id,attr"`
 	Pc        classifier.PacketClassifier
+	MetaC     classifier.PacketClassifier
 	LayerId   int `xml:"layer,attr"`
 	layer     gopacket.LayerType
-	count     report.Accumulator
+	count     map[string]report.Accumulator
 	input     chan Measurement
 	output    chan Measurement
 	pubOutput bool
 }
 
 func (c *PacketCounter) Copy() Component {
-	return &PacketCounter{Id: c.Id, Pc: *&c.Pc, LayerId: c.LayerId}
+	return &PacketCounter{Id: c.Id, Pc: *&c.Pc, MetaC: *&c.MetaC, LayerId: c.LayerId}
 }
 
 func (c *PacketCounter) Init() {
-	c.count = report.GenerateAccumulator(c.Pc.GroupName())
+	c.count = make(map[string]report.Accumulator)
+	c.count["_"] = report.GenerateAccumulator(c.Pc.GroupName())
 	c.output = make(chan Measurement, CHANNEL_BUFFER_SIZE)
 	c.layer = gopacket.LayerType(c.LayerId)
 }
@@ -58,33 +60,54 @@ func (c *PacketCounter) Run() {
 		for packet := range c.input {
 			groupKey := c.Pc.GroupKey(&packet)
 			columnIdentifier := c.Pc.ColumnIdentifier()
+
+			counter := c.getAccumulator(&packet)
+
 			if countLayer := (*packet.Packet).Layer(c.layer); countLayer != nil {
-				c.count.Increment(groupKey, columnIdentifier)
-				c.count.IncrementValue(groupKey, columnIdentifier+"Header", len(countLayer.LayerContents()))
-				c.count.IncrementValue(groupKey, columnIdentifier+"Payload", len(countLayer.LayerPayload()))
+				counter.Increment(groupKey, columnIdentifier)
+				counter.IncrementValue(groupKey, columnIdentifier+"Header", len(countLayer.LayerContents()))
+				counter.IncrementValue(groupKey, columnIdentifier+"Payload", len(countLayer.LayerPayload()))
 			} else {
-				c.count.Increment(groupKey, "NO_"+columnIdentifier)
+				counter.Increment(groupKey, "NO_"+columnIdentifier)
 			}
 			c.output <- packet
 		}
 	}
 }
 
+func (c *PacketCounter) getAccumulator(m *Measurement) report.Accumulator {
+	if c.MetaC == nil {
+		return c.count["_"]
+	}
+
+	metaKey := c.MetaC.GroupKey(m)
+
+	if counter, ok := c.count[metaKey]; ok {
+		return counter
+	} else {
+		counter = report.GenerateAccumulator(metaKey)
+		c.count[metaKey] = counter
+		return counter
+	}
+}
+
 type StreamCounter struct {
 	Id        string `xml:"id,attr"`
 	Sc        classifier.StreamClassifier
-	count     report.Accumulator
+	MetaC     classifier.StreamClassifier
+	count     map[string]report.Accumulator
 	input     chan TCPStream
 	output    chan TCPStream
 	pubOutput bool
 }
 
 func (c *StreamCounter) Copy() Component {
-	return &StreamCounter{Id: c.Id, Sc: *&c.Sc}
+	return &StreamCounter{Id: c.Id, Sc: *&c.Sc, MetaC: *&c.Sc}
 }
 
 func (c *StreamCounter) Init() {
-	c.count = report.GenerateAccumulator(c.Sc.GroupName())
+	c.count = make(map[string]report.Accumulator)
+	c.count["_"] = report.GenerateAccumulator(c.Sc.GroupName())
 	c.output = make(chan TCPStream, CHANNEL_BUFFER_SIZE)
 }
 
@@ -121,12 +144,30 @@ func (c *StreamCounter) Run() {
 			groupKey := c.Sc.GroupKeyStream(&stream)
 			columnIdentifier := c.Sc.ColumnIdentifier()
 
-			c.count.Increment(groupKey, columnIdentifier)
-			c.count.IncrementValue(groupKey, columnIdentifier+"Packets", stream.AllPackets())
-			c.count.IncrementValue(groupKey, columnIdentifier+"Bytes", int(stream.Bytes()))
+			counter := c.getAccumulator(&stream)
+
+			counter.Increment(groupKey, columnIdentifier)
+			counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.AllPackets())
+			counter.IncrementValue(groupKey, columnIdentifier+"Bytes", int(stream.Bytes()))
 
 			c.output <- stream
 		}
+	}
+}
+
+func (c *StreamCounter) getAccumulator(stream *TCPStream) report.Accumulator {
+	if c.MetaC == nil {
+		return c.count["_"]
+	}
+
+	metaKey := c.MetaC.GroupKeyStream(stream)
+
+	if counter, ok := c.count[metaKey]; ok {
+		return counter
+	} else {
+		counter = report.GenerateAccumulator(metaKey)
+		c.count[metaKey] = counter
+		return counter
 	}
 }
 
@@ -161,7 +202,11 @@ func (c *PacketCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				if err != nil {
 					return err
 				}
-				c.Pc = cl
+				if c.Pc == nil {
+					c.Pc = cl
+				} else {
+					c.MetaC = cl
+				}
 			}
 		case xml.EndElement:
 			if tt == start.End() {

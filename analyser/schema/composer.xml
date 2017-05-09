@@ -25,7 +25,7 @@
         <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test</Input>
         <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/local/</Output>
         <Concurrent>2</Concurrent>
-        <LogFile>/tmp/pcap.log</LogFile>
+        <LogFile>pcap.log</LogFile>
     </Settings>
     <SpecialPackets>
         <Skip file="134.91.78.217.pcap" packetNumber="7752042"/>

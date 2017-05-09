@@ -2,7 +2,6 @@ package main
 
 import (
 	"./analyser"
-	logger "./log"
 	"encoding/xml"
 	"flag"
 	"io/ioutil"
@@ -29,7 +28,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			logger.SetLogFile(config.Settings.LogFile)
+			config.ConfigFile = configFile
 
 			if split != "" {
 				//s := splitter.NewSplitter(split)

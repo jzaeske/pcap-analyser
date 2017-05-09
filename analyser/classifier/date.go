@@ -6,6 +6,7 @@ const DATE_FORMAT = "2006/01/02"
 
 type DayClassifier struct {
 	Identifier string `xml:"identifier,attr"`
+	Format     string `xml:"format,attr"`
 }
 
 // General Classifier
@@ -21,7 +22,7 @@ func (d DayClassifier) GroupName() string {
 // Packet Classifier
 
 func (d DayClassifier) GroupKey(measurement *Measurement) string {
-	return measurement.CaptureInfo.Timestamp.Format(DATE_FORMAT)
+	return measurement.CaptureInfo.Timestamp.Format(d.Format)
 }
 
 func (DayClassifier) MetaGroup(measurement *Measurement) string {
@@ -30,8 +31,8 @@ func (DayClassifier) MetaGroup(measurement *Measurement) string {
 
 // Stream Classifier
 
-func (DayClassifier) GroupKeyStream(s *TCPStream) string {
-	return s.Start.Format(DATE_FORMAT)
+func (d DayClassifier) GroupKeyStream(s *TCPStream) string {
+	return s.Start.Format(d.Format)
 }
 
 func (DayClassifier) MetaGroupStream(stream *TCPStream) string {

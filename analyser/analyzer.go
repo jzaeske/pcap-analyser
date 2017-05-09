@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"time"
+	"../util"
+	logger "../log"
 )
 
 type Analyzer struct {
@@ -23,6 +25,8 @@ func NewAnalyzer(config *AnalysisConfig) (a *Analyzer) {
 func (a *Analyzer) Run() {
 
 	start := time.Now()
+
+	a.initOutput()
 
 	var files = make(chan string)
 
@@ -48,6 +52,19 @@ func (a *Analyzer) Run() {
 
 	log.Printf("Took %s\n", elapsed)
 
+}
+
+func (a *Analyzer) initOutput() {
+	outputDir := a.config.Settings.Output
+
+	if err := os.MkdirAll(outputDir, 0777); err != nil {
+		log.Println("Unable to access Director; Using .")
+		outputDir = "."
+	}
+
+	util.CopyFile(a.config.ConfigFile, outputDir+"/input.xml")
+
+	logger.SetLogFile(outputDir + "/" + a.config.Settings.LogFile)
 }
 
 func (a *Analyzer) ExportCsv() {

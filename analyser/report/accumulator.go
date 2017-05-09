@@ -4,9 +4,12 @@ import (
 	"../../merge"
 	"strconv"
 	"time"
+	"sync"
 )
 
 var accumulators map[string][]Accumulator
+
+var accumulatorLock sync.RWMutex
 
 type (
 	Accumulator struct {
@@ -16,6 +19,7 @@ type (
 )
 
 func GenerateAccumulator(identifier string) Accumulator {
+	accumulatorLock.Lock()
 	if accumulators == nil {
 		accumulators = make(map[string][]Accumulator)
 	}
@@ -26,6 +30,7 @@ func GenerateAccumulator(identifier string) Accumulator {
 	} else {
 		accumulators[identifier] = []Accumulator{accumulator}
 	}
+	accumulatorLock.Unlock()
 	return accumulator
 }
 

@@ -14,6 +14,7 @@ import (
 )
 
 type AnalysisConfig struct {
+	ConfigFile     string
 	Components     Components
 	Chain          []Connect
 	Settings       Settings

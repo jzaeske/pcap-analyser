@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<AnalysisConfig xmlns="http://vs.uni-due.de/pcap-analyser">
+    <Components>
+        <Parser id="parser"/>
+        <Filter id="inout" bpf="ether dst 00:0c:29:02:7b:e7"/>
+        <PacketCounter id="count-in" layer="17">
+            <DayClassifier identifier="ethIn" format="2006/01"/>
+            <Ip4Classifier identifier="_" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="count-ip" layer="20">
+            <DayClassifier identifier="ipIn" format="2006/01"/>
+            <Ip4Classifier identifier="_" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="count-tcp" layer="44">
+            <DayClassifier identifier="tcpIn" format="2006/01"/>
+            <Ip4Classifier identifier="_" reverse="false"/>
+        </PacketCounter>
+        <Filter id="tcp-synack" bpf="tcp[13] &amp; 0x12 = 18"/>
+        <PacketCounter id="count-synack" layer="44">
+            <DayClassifier identifier="synAck" format="2006/01"/>
+            <Ip4Classifier identifier="_" reverse="false"/>
+        </PacketCounter>
+        <PacketCounter id="out" layer="17">
+            <DayClassifier identifier="ethOut" format="2006/01"/>
+            <Ip4Classifier identifier="_" reverse="true"/>
+        </PacketCounter>
+    </Components>
+    <Connect output="FILE" input="parser"/>
+    <Connect output="parser" input="inout"/>
+    <Connect output="inout" input="count-in"/>
+    <Connect output="count-in" input="count-ip"/>
+    <Connect output="count-ip" input="count-tcp"/>
+    <Connect output="count-tcp" input="tcp-synack"/>
+    <Connect output="tcp-synack" input="count-synack"/>
+    <Connect no="inout" input="out"/>
+    <Settings>
+        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test/</Input>
+        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/timeperip</Output>
+        <Concurrent>2</Concurrent>
+        <LogFile>pcap.log</LogFile>
+    </Settings>
+</AnalysisConfig>
