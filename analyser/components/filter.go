@@ -4,6 +4,8 @@ import (
 	. "../chains"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"time"
+	"log"
 )
 
 func createBPFFromString(instruction string) (*pcap.BPF, error) {
@@ -22,6 +24,8 @@ func createBPFFromString(instruction string) (*pcap.BPF, error) {
 type Filter struct {
 	Id        string `xml:"id,attr"`
 	Criteria  string `xml:"bpf,attr"`
+	MinTime   string `xml:"minTime,attr"`
+	MaxTime   string `xml:"maxTime,attr"`
 	input     chan Measurement
 	output    chan Measurement
 	no        chan Measurement
@@ -39,7 +43,7 @@ type BackscatterFilter struct {
 }
 
 func (f *Filter) Copy() Component {
-	return &Filter{Id: f.Id, Criteria: f.Criteria}
+	return &Filter{Id: f.Id, Criteria: f.Criteria, MinTime: f.MinTime, MaxTime: f.MaxTime}
 }
 
 func (f *Filter) Init() {
@@ -83,8 +87,28 @@ func (f *Filter) Run() {
 	if bpf, err := createBPFFromString(f.Criteria); err != nil {
 		panic(err)
 	} else {
+		var minTime, maxTime time.Time
+		if min, err := time.Parse("2006/01/02 15:04:05", f.MinTime); err == nil {
+			minTime = min
+		} else {
+			log.Fatal(err)
+		}
+		if max, err := time.Parse("2006/01/02 15:04:05", f.MaxTime); err == nil {
+			maxTime = max
+		} else {
+			log.Fatal(err)
+		}
 		if f.input != nil {
 			for measurement := range f.input {
+				if minTime.After((*measurement.CaptureInfo).Timestamp) {
+					f.no <- measurement
+					continue
+				}
+				if maxTime.Before((*measurement.CaptureInfo).Timestamp) {
+					f.no <- measurement
+					continue
+				}
+
 				if bpf.Matches(*measurement.CaptureInfo, (*measurement.Packet).Data()) {
 					f.output <- measurement
 				} else {

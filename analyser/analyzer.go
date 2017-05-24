@@ -90,10 +90,10 @@ func (a *Analyzer) ExportCsv() {
 
 			// Write any buffered data to the underlying writer (standard output).
 			w.Flush()
-
 			if err := w.Error(); err != nil {
 				log.Fatal(err)
 			}
+			f.Close()
 		} else {
 			log.Println(err)
 		}

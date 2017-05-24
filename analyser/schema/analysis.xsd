@@ -56,6 +56,8 @@
     <xs:complexType name="Filter">
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="bpf" type="xs:string"/>
+        <xs:attribute name="minTime" type="xs:string"/>
+        <xs:attribute name="maxTime" type="xs:string"/>
     </xs:complexType>
     <xs:complexType name="Stat">
         <xs:attribute name="id" type="xs:string" use="required"/>

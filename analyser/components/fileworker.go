@@ -63,7 +63,7 @@ func (w *FileWorker) handleFile(file string) {
 	defer f.Close()
 	var start = true
 	// add a large buffer between File Reader and gcapgo to reduce the amount of IO reads to the filesystem
-	w.r = bufio.NewReaderSize(f, CHANNEL_BUFFER_SIZE)
+	w.r = bufio.NewReaderSize(f, FILE_READ_BUFFER_SIZE)
 	if r, err := pcapgo.NewReader(w.r); err != nil {
 		log.Panic(err)
 	} else {

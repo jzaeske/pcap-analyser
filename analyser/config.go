@@ -1,16 +1,16 @@
 package analyser
 
 import (
-	"encoding/xml"
-	com "./components"
 	"./chains"
-	"sync"
+	com "./components"
+	"encoding/xml"
+	"errors"
+	"io/ioutil"
 	"log"
 	"os"
-	"io/ioutil"
 	"sort"
 	"strings"
-	"errors"
+	"sync"
 )
 
 type AnalysisConfig struct {
@@ -38,7 +38,7 @@ type SpecialPackets struct {
 
 type Skip struct {
 	File         string `xml:"file,attr"`
-	PacketNumber int `xml:"packetNumber,attr"`
+	PacketNumber int    `xml:"packetNumber,attr"`
 }
 
 func (sp *SpecialPackets) IsSkip(file string, number int) bool {

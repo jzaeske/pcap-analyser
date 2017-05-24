@@ -4,9 +4,11 @@ set ylabel 'Packets/day'
 set xlabel 'day'
 set grid
 set term png size 1920,1080
-set timefmt "%Y/%m/%d"
+set timefmt "%Y/%m"
 set xdata time
 set output 'perday.png'
 set format x "%Y/%m"
-set palette model RGB defined (0 'green', 1 'red')
-plot [:][:] 'packetsPerDay_date_20170118.csv' using 1:($2+$4):($2 < 0 ? 1 :  0) with impulses palette
+
+filename(n) = sprintf("134.91.78.%d.csv",n)
+
+plot for[i=160:170] filename(i) using 1:3 with lines

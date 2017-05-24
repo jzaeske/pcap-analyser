@@ -4,24 +4,24 @@
         <Parser id="parser"/>
         <Filter id="inout" bpf="ether dst 00:0c:29:02:7b:e7"/>
         <PacketCounter id="count-in" layer="17">
-            <DayClassifier identifier="ethIn" format="2006/01"/>
+            <DayClassifier identifier="ethIn" format="2006/01/02"/>
             <Ip4Classifier identifier="_" reverse="false"/>
         </PacketCounter>
         <PacketCounter id="count-ip" layer="20">
-            <DayClassifier identifier="ipIn" format="2006/01"/>
+            <DayClassifier identifier="ipIn" format="2006/01/02"/>
             <Ip4Classifier identifier="_" reverse="false"/>
         </PacketCounter>
         <PacketCounter id="count-tcp" layer="44">
-            <DayClassifier identifier="tcpIn" format="2006/01"/>
+            <DayClassifier identifier="tcpIn" format="2006/01/02"/>
             <Ip4Classifier identifier="_" reverse="false"/>
         </PacketCounter>
         <Filter id="tcp-synack" bpf="tcp[13] &amp; 0x12 = 18"/>
         <PacketCounter id="count-synack" layer="44">
-            <DayClassifier identifier="synAck" format="2006/01"/>
+            <DayClassifier identifier="synAck" format="2006/01/02"/>
             <Ip4Classifier identifier="_" reverse="false"/>
         </PacketCounter>
         <PacketCounter id="out" layer="17">
-            <DayClassifier identifier="ethOut" format="2006/01"/>
+            <DayClassifier identifier="ethOut" format="2006/01/02"/>
             <Ip4Classifier identifier="_" reverse="true"/>
         </PacketCounter>
     </Components>

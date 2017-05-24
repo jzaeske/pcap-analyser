@@ -3,8 +3,9 @@ package report
 import (
 	"../../merge"
 	"strconv"
-	"time"
 	"sync"
+	"time"
+	"sort"
 )
 
 var accumulators map[string][]Accumulator
@@ -49,7 +50,7 @@ func GetJoinedAccumulator(identifier string) Accumulator {
 }
 
 func GetIdentifiers() []string {
-	var identifers [] string
+	var identifers []string
 	for ident := range accumulators {
 		identifers = append(identifers, ident)
 	}
@@ -125,6 +126,7 @@ func (a *Accumulator) GetCsv() <-chan []string {
 	go func() {
 		// Header Row with column names
 		columns := a.Columns()
+		sort.Strings(columns)
 		out <- append([]string{a.identifier}, columns...)
 		for date, row := range a.acc {
 			rowData := []string{date}
