@@ -286,6 +286,8 @@ func (c *Components) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error 
 				comp = new(com.Stat)
 			case "Filter":
 				comp = new(com.Filter)
+			case "PacketOutput":
+				comp = new(com.PacketOutput)
 			default:
 				log.Fatalln("Type not found", tt.Name.Local)
 			}

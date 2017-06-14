@@ -196,6 +196,10 @@ func (c *PacketCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				cl = new(classifier.PortClassifier)
 			case "DayClassifier":
 				cl = new(classifier.DayClassifier)
+			case "PayloadClassifier":
+				cl = new(classifier.PayloadClassifier)
+			case "StaticClassifier":
+				cl = new(classifier.StaticClassifier)
 			}
 			if cl != nil {
 				err = d.DecodeElement(cl, &tt)
@@ -238,6 +242,10 @@ func (c *StreamCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				cl = new(classifier.PortClassifier)
 			case "DayClassifier":
 				cl = new(classifier.DayClassifier)
+			case "PayloadClassifier":
+				cl = new(classifier.PayloadClassifier)
+			case "StaticClassifier":
+				cl = new(classifier.StaticClassifier)
 			}
 			if cl != nil {
 				err = d.DecodeElement(cl, &tt)

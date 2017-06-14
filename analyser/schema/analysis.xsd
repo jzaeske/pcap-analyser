@@ -24,6 +24,7 @@
             <xs:element type="BackscatterFilter" name="BackscatterFilter"/>
             <xs:element type="Filter" name="Filter"/>
             <xs:element type="Stat" name="Stat"/>
+            <xs:element type="PacketOutput" name="PacketOutput"/>
         </xs:choice>
     </xs:complexType>
     <xs:complexType name="Parser">
@@ -38,6 +39,8 @@
             <xs:element type="PortClassifier" name="PortClassifier"/>
             <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
             <xs:element type="DayClassifier" name="DayClassifier"/>
+            <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
+            <xs:element type="StaticClassifier" name="StaticClassifier"/>
         </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
     </xs:complexType>
@@ -46,6 +49,8 @@
             <xs:element type="PortClassifier" name="PortClassifier"/>
             <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
             <xs:element type="DayClassifier" name="DayClassifier"/>
+            <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
+            <xs:element type="StaticClassifier" name="StaticClassifier"/>
         </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="layer" type="xs:int" use="required"/>
@@ -63,6 +68,10 @@
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="p" type="xs:float" use="required"/>
     </xs:complexType>
+    <xs:complexType name="PacketOutput">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="outputFile" type="xs:string" use="required"/>
+    </xs:complexType>
 
     <!-- Classifier for Packets and Streams. Defined in package classifier -->
 
@@ -77,6 +86,14 @@
     <xs:complexType name="DayClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="format" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="PayloadClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="bytes" type="xs:int" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="StaticClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="filename" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="Connect">
         <xs:attribute name="input" type="xs:string" use="required"/>

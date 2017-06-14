@@ -5,7 +5,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"time"
-	"log"
 )
 
 func createBPFFromString(instruction string) (*pcap.BPF, error) {
@@ -87,24 +86,24 @@ func (f *Filter) Run() {
 	if bpf, err := createBPFFromString(f.Criteria); err != nil {
 		panic(err)
 	} else {
-		var minTime, maxTime time.Time
+		var minTime, maxTime *time.Time
 		if min, err := time.Parse("2006/01/02 15:04:05", f.MinTime); err == nil {
-			minTime = min
+			minTime = &min
 		} else {
-			log.Fatal(err)
+			minTime = nil
 		}
 		if max, err := time.Parse("2006/01/02 15:04:05", f.MaxTime); err == nil {
-			maxTime = max
+			maxTime = &max
 		} else {
-			log.Fatal(err)
+			maxTime = nil
 		}
 		if f.input != nil {
 			for measurement := range f.input {
-				if minTime.After((*measurement.CaptureInfo).Timestamp) {
+				if minTime != nil && minTime.After((*measurement.CaptureInfo).Timestamp) {
 					f.no <- measurement
 					continue
 				}
-				if maxTime.Before((*measurement.CaptureInfo).Timestamp) {
+				if maxTime != nil && maxTime.Before((*measurement.CaptureInfo).Timestamp) {
 					f.no <- measurement
 					continue
 				}
