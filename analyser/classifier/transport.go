@@ -3,6 +3,7 @@ package classifier
 import (
 	. "../chains"
 	"strconv"
+	"encoding/hex"
 )
 
 type TransportClassifier struct {
@@ -22,7 +23,12 @@ func (i TransportClassifier) ColumnIdentifier() string {
 // PacketClassifier
 
 func (i TransportClassifier) GroupKey(measurement *Measurement) string {
-	protocolField := (*measurement.Packet).Data()[9]
+	protocolField := (*measurement.Packet).Data()[14+9]
+
+	if protocolField == 47 {
+		inner := (*measurement.Packet).Data()[34+2:34+4]
+		return "GRE_" + hex.EncodeToString(inner)
+	}
 
 	return strconv.Itoa(int(protocolField))
 }
