@@ -50,6 +50,9 @@ func (s *Stat) Run() {
 
 	if s.input != nil {
 		for packet := range s.input {
+			if packet.Start {
+				continue
+			}
 			value := float64(len((*packet.Packet).Data()))
 
 			s.mean.AddFloat(value)

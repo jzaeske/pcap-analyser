@@ -21,10 +21,12 @@
             <xs:element type="Composer" name="Composer"/>
             <xs:element type="StreamCounter" name="StreamCounter"/>
             <xs:element type="PacketCounter" name="PacketCounter"/>
-            <xs:element type="BackscatterFilter" name="BackscatterFilter"/>
+            <xs:element type="StreamScorer" name="StreamScorer"/>
             <xs:element type="Filter" name="Filter"/>
+            <xs:element type="StreamFilter" name="StreamFilter"/>
             <xs:element type="Stat" name="Stat"/>
             <xs:element type="PacketOutput" name="PacketOutput"/>
+            <xs:element type="CsvStreamOutput" name="CsvStreamOutput"/>
         </xs:choice>
     </xs:complexType>
     <xs:complexType name="Parser">
@@ -33,29 +35,44 @@
     <xs:complexType name="Composer">
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="keepPayload" type="xs:boolean" use="optional" default="false"/>
+        <xs:attribute name="onlyDefrag" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
     <xs:complexType name="StreamCounter">
-        <xs:choice minOccurs="1" maxOccurs="2">
-            <xs:element type="PortClassifier" name="PortClassifier"/>
-            <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
-            <xs:element type="DayClassifier" name="DayClassifier"/>
-            <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
-            <xs:element type="StaticClassifier" name="StaticClassifier"/>
-        </xs:choice>
+        <xs:sequence>
+            <xs:choice minOccurs="1" maxOccurs="2">
+                <xs:element type="PortClassifier" name="PortClassifier"/>
+                <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+                <xs:element type="Ip4PortClassifier" name="Ip4PortClassifier"/>
+                <xs:element type="DayClassifier" name="DayClassifier"/>
+                <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
+                <xs:element type="StaticClassifier" name="StaticClassifier"/>
+            </xs:choice>
+        </xs:sequence>
         <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="includeScores" type="xs:boolean" use="optional"/>
     </xs:complexType>
     <xs:complexType name="PacketCounter">
         <xs:choice minOccurs="1" maxOccurs="2">
             <xs:element type="PortClassifier" name="PortClassifier"/>
             <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+            <xs:element type="Ip4PortClassifier" name="Ip4PortClassifier"/>
             <xs:element type="DayClassifier" name="DayClassifier"/>
             <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
             <xs:element type="StaticClassifier" name="StaticClassifier"/>
+            <xs:element type="IcmpClassifier" name="IcmpClassifier"/>
+            <xs:element type="TransportClassifier" name="TransportClassifier"/>
         </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="layer" type="xs:int" use="required"/>
     </xs:complexType>
-    <xs:complexType name="BackscatterFilter">
+    <xs:complexType name="StreamScorer">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element type="ZmapFPScore" name="ZmapFPScore"/>
+            <xs:element type="MasscanFPScore" name="MasscanFPScore"/>
+            <xs:element type="HandshakeScore" name="HandshakeScore"/>
+            <xs:element type="PayloadScore" name="PayloadScore"/>
+            <xs:element type="DurationScore" name="DurationScore"/>
+        </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="Filter">
@@ -63,6 +80,13 @@
         <xs:attribute name="bpf" type="xs:string"/>
         <xs:attribute name="minTime" type="xs:string"/>
         <xs:attribute name="maxTime" type="xs:string"/>
+    </xs:complexType>
+    <xs:complexType name="StreamFilter">
+        <xs:sequence minOccurs="0" maxOccurs="unbounded">
+            <xs:element type="ScoreComparator" name="ScoreComparator"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="policy" type="xs:string"/>
     </xs:complexType>
     <xs:complexType name="Stat">
         <xs:attribute name="id" type="xs:string" use="required"/>
@@ -72,16 +96,29 @@
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="outputFile" type="xs:string" use="required"/>
     </xs:complexType>
+    <xs:complexType name="CsvStreamOutput">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="outputFile" type="xs:string" use="required"/>
+        <xs:attribute name="fields" type="xs:string" use="required"/>
+    </xs:complexType>
 
     <!-- Classifier for Packets and Streams. Defined in package classifier -->
 
     <xs:complexType name="PortClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="reverse" type="xs:boolean" use="optional"/>
+        <xs:attribute name="both" type="xs:boolean" use="optional"/>
     </xs:complexType>
     <xs:complexType name="Ip4Classifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="reverse" type="xs:boolean" use="optional"/>
+        <xs:attribute name="cidr" type="xs:integer" use="optional"/>
+    </xs:complexType>
+    <xs:complexType name="Ip4PortClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="reverseIp" type="xs:boolean" use="optional"/>
+        <xs:attribute name="reversePort" type="xs:boolean" use="optional"/>
+        <xs:attribute name="cidr" type="xs:integer" use="optional"/>
     </xs:complexType>
     <xs:complexType name="DayClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
@@ -95,6 +132,12 @@
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="filename" type="xs:string" use="required"/>
     </xs:complexType>
+    <xs:complexType name="IcmpClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="TransportClassifier">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+    </xs:complexType>
     <xs:complexType name="Connect">
         <xs:attribute name="input" type="xs:string" use="required"/>
         <xs:attribute name="output" type="xs:string"/>
@@ -102,6 +145,35 @@
         <xs:attribute name="no" type="xs:string"/>
     </xs:complexType>
 
+    <xs:complexType name="ZmapFPScore">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="score" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="MasscanFPScore">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="score" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="HandshakeScore">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="score" type="xs:string" use="required"/>
+        <xs:attribute name="pattern" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="PayloadScore">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="score" type="xs:string" use="required"/>
+        <xs:attribute name="hexVal" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="DurationScore">
+        <xs:attribute name="identifier" type="xs:string" use="required"/>
+        <xs:attribute name="score" type="xs:string" use="required"/>
+        <xs:attribute name="minMillis" type="xs:int" use="optional"/>
+        <xs:attribute name="maxMillis" type="xs:int" use="optional"/>
+    </xs:complexType>
+    <xs:complexType name="ScoreComparator">
+        <xs:attribute name="score" type="xs:string" use="required"/>
+        <xs:attribute name="min" type="xs:int" use="optional"/>
+        <xs:attribute name="max" type="xs:int" use="optional"/>
+    </xs:complexType>
     <!-- General Settings. Part of Configuration in package analyser -->
 
     <xs:complexType name="Settings">

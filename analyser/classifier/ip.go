@@ -4,6 +4,7 @@ import (
 	. "../chains"
 	"github.com/google/gopacket/layers"
 	"net"
+	"strconv"
 )
 
 type Ip4Classifier struct {
@@ -26,8 +27,8 @@ func (i Ip4Classifier) ColumnIdentifier() string {
 // PacketClassifier
 
 func (i Ip4Classifier) GroupKey(measurement *Measurement) string {
-	if i.mask == nil && i.CIDR >= 0 && i.CIDR <= 32 {
-		i.mask = net.CIDRMask(i.CIDR, 32-i.CIDR)
+	if i.mask == nil && i.CIDR > 0 && i.CIDR < 32 {
+		i.mask = net.CIDRMask(i.CIDR, 32)
 	}
 	ipLayer := (*measurement.Packet).Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
@@ -45,27 +46,19 @@ func (i Ip4Classifier) GroupKey(measurement *Measurement) string {
 	return UNCLASSIFIED
 }
 
-func (i Ip4Classifier) MetaGroup(measurement *Measurement) string {
-	return UNCLASSIFIED
-}
-
 // Stream Classifier
 
 func (i Ip4Classifier) GroupKeyStream(stream *TCPStream) string {
 	if i.Reverse {
-		return stream.Network.Dst().String()
+		return stream.Network.Src().String()
 	}
-	return stream.Network.Src().String()
-}
-
-func (i Ip4Classifier) MetaGroupStream(stream *TCPStream) string {
-	return UNCLASSIFIED
+	return stream.Network.Dst().String()
 }
 
 func ipOrNetwork(ip net.IP, mask net.IPMask) string {
-	if mask == nil {
+	if mask != nil {
 		ones, _ := mask.Size()
-		return ip.Mask(mask).String() + "/" + string(ones)
+		return ip.Mask(mask).String() + "/" + strconv.Itoa(ones)
 	} else {
 		return ip.String()
 	}

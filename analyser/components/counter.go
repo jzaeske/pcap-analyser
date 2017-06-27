@@ -15,7 +15,7 @@ type PacketCounter struct {
 	MetaC     classifier.PacketClassifier
 	LayerId   int `xml:"layer,attr"`
 	layer     gopacket.LayerType
-	count     map[string]report.Accumulator
+	count     map[string]*report.Accumulator
 	input     chan Measurement
 	output    chan Measurement
 	pubOutput bool
@@ -26,7 +26,7 @@ func (c *PacketCounter) Copy() Component {
 }
 
 func (c *PacketCounter) Init() {
-	c.count = make(map[string]report.Accumulator)
+	c.count = make(map[string]*report.Accumulator)
 	c.count["_"] = report.GenerateAccumulator(c.Pc.GroupName())
 	c.output = make(chan Measurement, CHANNEL_BUFFER_SIZE)
 	c.layer = gopacket.LayerType(c.LayerId)
@@ -58,6 +58,9 @@ func (c *PacketCounter) Run() {
 
 	if c.input != nil {
 		for packet := range c.input {
+			if packet.Start {
+				continue
+			}
 			groupKey := c.Pc.GroupKey(&packet)
 			columnIdentifier := c.Pc.ColumnIdentifier()
 
@@ -75,7 +78,7 @@ func (c *PacketCounter) Run() {
 	}
 }
 
-func (c *PacketCounter) getAccumulator(m *Measurement) report.Accumulator {
+func (c *PacketCounter) getAccumulator(m *Measurement) *report.Accumulator {
 	if c.MetaC == nil {
 		return c.count["_"]
 	}
@@ -93,20 +96,21 @@ func (c *PacketCounter) getAccumulator(m *Measurement) report.Accumulator {
 
 type StreamCounter struct {
 	Id        string `xml:"id,attr"`
+	IncScores bool   `xml:"includeScores,attr"`
 	Sc        classifier.StreamClassifier
 	MetaC     classifier.StreamClassifier
-	count     map[string]report.Accumulator
+	count     map[string]*report.Accumulator
 	input     chan TCPStream
 	output    chan TCPStream
 	pubOutput bool
 }
 
 func (c *StreamCounter) Copy() Component {
-	return &StreamCounter{Id: c.Id, Sc: *&c.Sc, MetaC: *&c.Sc}
+	return &StreamCounter{Id: c.Id, Sc: *&c.Sc, MetaC: *&c.MetaC, IncScores: c.IncScores}
 }
 
 func (c *StreamCounter) Init() {
-	c.count = make(map[string]report.Accumulator)
+	c.count = make(map[string]*report.Accumulator)
 	c.count["_"] = report.GenerateAccumulator(c.Sc.GroupName())
 	c.output = make(chan TCPStream, CHANNEL_BUFFER_SIZE)
 }
@@ -140,22 +144,28 @@ func (c *StreamCounter) Run() {
 	defer close(c.output)
 
 	if c.input != nil {
+		columnIdentifier := c.Sc.ColumnIdentifier()
 		for stream := range c.input {
 			groupKey := c.Sc.GroupKeyStream(&stream)
-			columnIdentifier := c.Sc.ColumnIdentifier()
 
 			counter := c.getAccumulator(&stream)
 
+			if c.IncScores {
+				stream.EachScore(func(key string, value int) {
+					counter.IncrementValue(groupKey, key, value)
+				})
+			}
+
 			counter.Increment(groupKey, columnIdentifier)
-			counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.AllPackets())
-			counter.IncrementValue(groupKey, columnIdentifier+"Bytes", int(stream.Bytes()))
+			counter.IncrementValue(groupKey, columnIdentifier+"_pck_in", stream.GetCount("c_pck"))
+			counter.IncrementValue(groupKey, columnIdentifier+"_bytes_in", stream.GetCount("c_bytes"))
 
 			c.output <- stream
 		}
 	}
 }
 
-func (c *StreamCounter) getAccumulator(stream *TCPStream) report.Accumulator {
+func (c *StreamCounter) getAccumulator(stream *TCPStream) *report.Accumulator {
 	if c.MetaC == nil {
 		return c.count["_"]
 	}
@@ -200,6 +210,10 @@ func (c *PacketCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				cl = new(classifier.PayloadClassifier)
 			case "StaticClassifier":
 				cl = new(classifier.StaticClassifier)
+			case "IcmpClassifier":
+				cl = new(classifier.IcmpClassifier)
+			case "TransportClassifier":
+				cl = new(classifier.TransportClassifier)
 			}
 			if cl != nil {
 				err = d.DecodeElement(cl, &tt)
@@ -226,6 +240,9 @@ func (c *StreamCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 		if attr.Name.Local == "id" {
 			c.Id = attr.Value
 		}
+		if attr.Name.Local == "includeScores" {
+			c.IncScores, _ = strconv.ParseBool(attr.Value)
+		}
 	}
 	for {
 		t, err := d.Token()
@@ -238,6 +255,8 @@ func (c *StreamCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 			switch tt.Name.Local {
 			case "Ip4Classifier":
 				cl = new(classifier.Ip4Classifier)
+			case "Ip4PortClassifier":
+				cl = new(classifier.Ip4PortClassifier)
 			case "PortClassifier":
 				cl = new(classifier.PortClassifier)
 			case "DayClassifier":
@@ -252,7 +271,11 @@ func (c *StreamCounter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				if err != nil {
 					return err
 				}
-				c.Sc = cl
+				if c.Sc == nil {
+					c.Sc = cl
+				} else {
+					c.MetaC = cl
+				}
 			}
 		case xml.EndElement:
 			if tt == start.End() {

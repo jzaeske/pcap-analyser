@@ -7,7 +7,7 @@ import (
 
 type PayloadClassifier struct {
 	Identifier string `xml:"identifier,attr"`
-	Bytes      int `xml:"bytes,attr"`
+	Bytes      int    `xml:"bytes,attr"`
 }
 
 // General Classifier
@@ -25,13 +25,12 @@ func (p PayloadClassifier) GroupName() string {
 func (p PayloadClassifier) GroupKey(measurement *Measurement) string {
 	transportLayer := (*measurement.Packet).TransportLayer()
 	if transportLayer != nil {
+		if len(transportLayer.LayerPayload()) < p.Bytes {
+			return hex.EncodeToString(transportLayer.LayerPayload())
+		}
 		payload := transportLayer.LayerPayload()[0:p.Bytes]
 		return hex.EncodeToString(payload)
 	}
-	return UNCLASSIFIED
-}
-
-func (PayloadClassifier) MetaGroup(measurement *Measurement) string {
 	return UNCLASSIFIED
 }
 
@@ -43,8 +42,4 @@ func (p PayloadClassifier) GroupKeyStream(s *TCPStream) string {
 		return hex.EncodeToString(payload)
 	}
 	return hex.EncodeToString(s.Payload)
-}
-
-func (PayloadClassifier) MetaGroupStream(stream *TCPStream) string {
-	return UNCLASSIFIED
 }

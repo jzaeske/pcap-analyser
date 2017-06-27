@@ -15,7 +15,7 @@ var deleteDuration, _ = time.ParseDuration("-1m")
 
 type Composer struct {
 	Id           string `xml:"id,attr"`
-	counter      report.Accumulator
+	counter      *report.Accumulator
 	input        chan Measurement
 	output       chan TCPStream
 	other        chan Measurement
@@ -25,16 +25,11 @@ type Composer struct {
 	assembler    *r.Assembler
 	pool         *r.StreamPool
 	KeepPayload  bool `xml:"keepPayload,attr"`
-}
-
-type tcpContext gopacket.CaptureInfo
-
-func (c tcpContext) GetCaptureInfo() gopacket.CaptureInfo {
-	return gopacket.CaptureInfo(c)
+	OnlyDefrag   bool `xml:"onlyDefrag,attr"`
 }
 
 func (c *Composer) Copy() Component {
-	return &Composer{Id: c.Id, KeepPayload: c.KeepPayload}
+	return &Composer{Id: c.Id, KeepPayload: c.KeepPayload, OnlyDefrag: c.OnlyDefrag}
 }
 
 func (c *Composer) Init() {
@@ -87,6 +82,8 @@ func (c *Composer) Run() {
 				// new PCAP file with distinct dst addresses.
 				// Reset the assembler
 				c.resetAssembler()
+				lastFlush = time.Time{}
+				continue
 			}
 
 			// Get IP and TCP layer. If both present, reassemble the tcp stream
@@ -110,10 +107,12 @@ func (c *Composer) Run() {
 					nextDecoder.Decode(newIpPacket.Payload, pb)
 				}
 
-				if tcpLayer := (*packet.Packet).Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				if c.OnlyDefrag {
+					c.other <- packet
+				} else if tcpLayer := (*packet.Packet).Layer(layers.LayerTypeTCP); tcpLayer != nil {
 					if tcpPacket, ok := tcpLayer.(*layers.TCP); ok {
 						tcpPacket.SetNetworkLayerForChecksum((*packet.Packet).NetworkLayer())
-						c.assembler.AssembleWithContext((*packet.Packet).NetworkLayer().NetworkFlow(), tcpPacket, tcpContext(*packet.CaptureInfo))
+						c.assembler.AssembleWithContext((*packet.Packet).NetworkLayer().NetworkFlow(), tcpPacket, TcpContext{Ci: *packet.CaptureInfo, Id: newIpPacket.Id})
 					} else {
 						c.counter.Increment("_", "tcp_corrupt")
 					}
@@ -126,13 +125,15 @@ func (c *Composer) Run() {
 
 			// stepped window. If we have not flushed yet or on start of new file
 			// reset the last flush timestamp
-			if lastFlush.IsZero() || packet.Start {
+			if lastFlush.IsZero() {
 				lastFlush = (*packet.CaptureInfo).Timestamp
 			} else {
 				// if last flush is older than step size, delete flush window
 				if lastFlush.Add(moveDuration).Before((*packet.CaptureInfo).Timestamp) {
-					lastFlush = (*packet.CaptureInfo).Timestamp
-					c.assembler.FlushCloseOlderThan(lastFlush.Add(deleteDuration))
+					if !c.OnlyDefrag {
+						lastFlush = (*packet.CaptureInfo).Timestamp
+						c.assembler.FlushCloseOlderThan(lastFlush.Add(deleteDuration))
+					}
 					if dis := c.defragmenter.DiscardOlderThan(lastFlush.Add(deleteDuration)); dis > 0 {
 						c.counter.IncrementValue("_", "ip_discard_fragments", dis)
 					}

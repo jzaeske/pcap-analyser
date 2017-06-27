@@ -2,10 +2,10 @@ package report
 
 import (
 	"../../merge"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
-	"sort"
 )
 
 var accumulators map[string][]Accumulator
@@ -19,7 +19,7 @@ type (
 	}
 )
 
-func GenerateAccumulator(identifier string) Accumulator {
+func GenerateAccumulator(identifier string) *Accumulator {
 	accumulatorLock.Lock()
 	if accumulators == nil {
 		accumulators = make(map[string][]Accumulator)
@@ -32,7 +32,7 @@ func GenerateAccumulator(identifier string) Accumulator {
 		accumulators[identifier] = []Accumulator{accumulator}
 	}
 	accumulatorLock.Unlock()
-	return accumulator
+	return &accumulator
 }
 
 func GetJoinedAccumulator(identifier string) Accumulator {

@@ -88,6 +88,8 @@ func (a *AnalysisConfig) GetChain() (chain *com.Parser, wg *sync.WaitGroup) {
 							log.Fatalf("incompatible chain: %s -> %s", output, id)
 						}
 					}
+				} else {
+					log.Fatalf("output: %s is not in components map", connect.Other)
 				}
 			} else if connect.No != "" {
 				if no, ok := componentsMap[connect.No]; ok {
@@ -100,6 +102,8 @@ func (a *AnalysisConfig) GetChain() (chain *com.Parser, wg *sync.WaitGroup) {
 					} else {
 						log.Fatalf("%s is not a filter", no)
 					}
+				} else {
+					log.Fatalf("no: %s is not in components map", connect.Other)
 				}
 			} else if connect.Other != "" {
 				if other, ok := componentsMap[connect.Other]; ok {
@@ -124,6 +128,8 @@ func (a *AnalysisConfig) GetChain() (chain *com.Parser, wg *sync.WaitGroup) {
 					} else {
 						log.Fatalf("%s is not a steamChain", other)
 					}
+				} else {
+					log.Fatalf("other: %s is not in components map", connect.Other)
 				}
 			}
 		} else {
@@ -280,14 +286,18 @@ func (c *Components) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error 
 				comp = new(com.StreamCounter)
 			case "PacketCounter":
 				comp = new(com.PacketCounter)
-			case "BackscatterFilter":
-				comp = new(com.BackscatterFilter)
 			case "Stat":
 				comp = new(com.Stat)
 			case "Filter":
 				comp = new(com.Filter)
+			case "StreamFilter":
+				comp = new(com.StreamFilter)
+			case "StreamScorer":
+				comp = new(com.StreamScorer)
 			case "PacketOutput":
 				comp = new(com.PacketOutput)
+			case "CsvStreamOutput":
+				comp = new(com.CsvStreamOutput)
 			default:
 				log.Fatalln("Type not found", tt.Name.Local)
 			}

@@ -43,8 +43,11 @@ func (p *Parser) OpenChannels() []interface{} {
 func (p *Parser) Run() {
 	if p.Input != nil {
 		for unparsed := range p.Input {
+			if unparsed.Start {
+				p.output <- Measurement{nil, nil, true}
+			}
 			packet := gopacket.NewPacket(*unparsed.Data, layers.LayerTypeEthernet, ParserOptions)
-			p.output <- Measurement{Packet: &packet, CaptureInfo: unparsed.CaptureInfo, Start: unparsed.Start}
+			p.output <- Measurement{Packet: &packet, CaptureInfo: unparsed.CaptureInfo, Start: false}
 		}
 	}
 	defer close(p.output)

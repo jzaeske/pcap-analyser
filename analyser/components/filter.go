@@ -2,8 +2,10 @@ package components
 
 import (
 	. "../chains"
+	"encoding/xml"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"log"
 	"time"
 )
 
@@ -32,8 +34,10 @@ type Filter struct {
 	pubNo     bool
 }
 
-type BackscatterFilter struct {
+type StreamFilter struct {
 	Id        string `xml:"id,attr"`
+	Policy    string `xml:"policy,attr"`
+	Comp      []ScoreComparator
 	input     chan TCPStream
 	output    chan TCPStream
 	other     chan TCPStream
@@ -84,6 +88,7 @@ func (f *Filter) Run() {
 	defer close(f.no)
 
 	if bpf, err := createBPFFromString(f.Criteria); err != nil {
+		log.Println(f.Criteria)
 		panic(err)
 	} else {
 		var minTime, maxTime *time.Time
@@ -99,6 +104,13 @@ func (f *Filter) Run() {
 		}
 		if f.input != nil {
 			for measurement := range f.input {
+				if measurement.Start {
+					// signaling packet
+					f.no <- measurement
+					f.output <- measurement
+					continue
+				}
+
 				if minTime != nil && minTime.After((*measurement.CaptureInfo).Timestamp) {
 					f.no <- measurement
 					continue
@@ -118,34 +130,38 @@ func (f *Filter) Run() {
 	}
 }
 
-func (b *BackscatterFilter) Copy() Component {
-	return &BackscatterFilter{Id: b.Id}
+func (b *StreamFilter) Copy() Component {
+	result := &StreamFilter{Id: b.Id, Policy: b.Policy}
+	for _, c := range b.Comp {
+		result.Comp = append(result.Comp, *&c)
+	}
+	return result
 }
 
-func (b *BackscatterFilter) Init() {
+func (b *StreamFilter) Init() {
 	b.output = make(chan TCPStream, CHANNEL_BUFFER_SIZE)
 	b.other = make(chan TCPStream, CHANNEL_BUFFER_SIZE)
 }
 
-func (b *BackscatterFilter) ComId() string {
+func (b *StreamFilter) ComId() string {
 	return b.Id
 }
 
-func (b *BackscatterFilter) Input(input *chan TCPStream) {
+func (b *StreamFilter) Input(input *chan TCPStream) {
 	b.input = *input
 }
 
-func (b *BackscatterFilter) Output() *chan TCPStream {
+func (b *StreamFilter) Output() *chan TCPStream {
 	b.pubOutput = true
 	return &b.output
 }
 
-func (b *BackscatterFilter) Other() interface{} {
+func (b *StreamFilter) Other() interface{} {
 	b.pubOther = true
 	return &b.other
 }
 
-func (b *BackscatterFilter) OpenChannels() []interface{} {
+func (b *StreamFilter) OpenChannels() []interface{} {
 	var open = []interface{}{}
 	if !b.pubOutput {
 		open = append(open, &b.output)
@@ -156,18 +172,84 @@ func (b *BackscatterFilter) OpenChannels() []interface{} {
 	return open
 }
 
-func (b *BackscatterFilter) Run() {
-	defer close(b.output)
-	defer close(b.other)
+func (f *StreamFilter) Run() {
+	defer close(f.output)
+	defer close(f.other)
 
-	if b.input != nil {
-		for stream := range b.input {
-			if stream.Handshake[0] == false {
-				b.output <- stream
+	if f.input != nil {
+		for stream := range f.input {
+
+			count, max := 0, len(f.Comp)
+
+			for _, c := range f.Comp {
+				if match := c.Compare(&stream); match {
+					count++
+				}
+			}
+
+			if f.Policy == "or" && count > 0 {
+				f.output <- stream
+			} else if f.Policy == "and" && count == max {
+				f.output <- stream
 			} else {
-				b.other <- stream
+				f.other <- stream
 			}
 		}
 	}
 
+}
+
+type ScoreComparator struct {
+	Score string `xml:"score,attr"`
+	Min   int    `xml:"min,attr"`
+	Max   int    `xml:"max,attr"`
+}
+
+func (comp *ScoreComparator) Compare(stream *TCPStream) bool {
+	if comp.Min > 0 && stream.GetScore(comp.Score) < comp.Min {
+		return false
+	}
+	if comp.Max != 0 && stream.GetScore(comp.Score) > comp.Max {
+		return false
+	}
+	return true
+}
+
+func (f *StreamFilter) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	for _, attr := range start.Attr {
+		if attr.Name.Local == "id" {
+			f.Id = attr.Value
+		}
+		if attr.Name.Local == "policy" {
+			f.Policy = attr.Value
+		}
+	}
+	for {
+		t, err := d.Token()
+		if err != nil {
+			return err
+		}
+		var sc *ScoreComparator
+		switch tt := t.(type) {
+		case xml.StartElement:
+			switch tt.Name.Local {
+			case "ScoreComparator":
+				sc = new(ScoreComparator)
+			}
+
+			if sc != nil {
+				err = d.DecodeElement(sc, &tt)
+				if err != nil {
+					return err
+				}
+				f.Comp = append(f.Comp, *sc)
+			}
+		case xml.EndElement:
+			if tt == start.End() {
+				return nil
+			}
+		}
+	}
+
+	return nil
 }

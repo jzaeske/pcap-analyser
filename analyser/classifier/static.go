@@ -25,16 +25,8 @@ func (p StaticClassifier) GroupKey(measurement *Measurement) string {
 	return p.Filename
 }
 
-func (StaticClassifier) MetaGroup(measurement *Measurement) string {
-	return UNCLASSIFIED
-}
-
 // Stream Classifier
 
 func (p StaticClassifier) GroupKeyStream(s *TCPStream) string {
 	return p.Filename
-}
-
-func (StaticClassifier) MetaGroupStream(stream *TCPStream) string {
-	return UNCLASSIFIED
 }

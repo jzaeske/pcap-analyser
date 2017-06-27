@@ -12,11 +12,9 @@ type general interface {
 type PacketClassifier interface {
 	general
 	GroupKey(measurement *Measurement) string
-	MetaGroup(measurement *Measurement) string
 }
 
 type StreamClassifier interface {
 	general
 	GroupKeyStream(s *TCPStream) string
-	MetaGroupStream(stream *TCPStream) string
 }

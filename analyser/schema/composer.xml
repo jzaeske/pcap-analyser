@@ -3,28 +3,23 @@
 <AnalysisConfig xmlns="http://vs.uni-due.de/pcap-analyser">
     <Components>
         <Parser id="parser"/>
+        <Filter id="inout" bpf="ether dst 00:0c:29:02:7b:e7 or tcp"/>
         <Composer id="tcp-assembly" keepPayload="false"/>
         <StreamCounter id="tcp-count">
-            <PortClassifier identifier="stream"/>
+            <StaticClassifier identifier="stream" filename="without-filter"/>
         </StreamCounter>
-        <BackscatterFilter id="filter-backscatter"/>
-        <StreamCounter id="count-backscatter">
-            <PortClassifier identifier="bs" reverse="true"/>
-        </StreamCounter>
-        <PacketCounter id="no-tcp" layer="LayerTypeUDP">
-            <PortClassifier identifier="udp"/>
-        </PacketCounter>
+        <PacketOutput id="out"
+                      outputFile="/home/jan/Dokumente/studium/masterarbeit/stuff/reassembly_compare/output.pcap"/>
     </Components>
     <Connect output="FILE" input="parser"/>
-    <Connect output="parser" input="tcp-assembly"/>
+    <Connect output="parser" input="inout"/>
+    <Connect output="inout" input="tcp-assembly"/>
     <Connect output="tcp-assembly" input="tcp-count"/>
-    <Connect output="tcp-count" input="filter-backscatter"/>
-    <Connect output="filter-backscatter" input="count-backscatter"/>
-    <Connect other="tcp-assembly" input="no-tcp"/>
+    <Connect no="inout" input="out"/>
     <Settings>
-        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test</Input>
-        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/local/</Output>
-        <Concurrent>2</Concurrent>
+        <Input>/home/jan/Dokumente/studium/masterarbeit/stuff/test/bh-wan17.pcap</Input>
+        <Output>/home/jan/Dokumente/studium/masterarbeit/stuff/reassembly_compare/</Output>
+        <Concurrent>1</Concurrent>
         <LogFile>pcap.log</LogFile>
     </Settings>
     <SpecialPackets>

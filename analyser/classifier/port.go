@@ -5,6 +5,7 @@ import . "../chains"
 type PortClassifier struct {
 	Identifier string `xml:"identifier,attr"`
 	Reverse    bool   `xml:"reverse,attr"`
+	Both       bool   `xml:"both,attr"`
 }
 
 // General Classifier
@@ -22,21 +23,17 @@ func (PortClassifier) GroupName() string {
 func (p PortClassifier) GroupKey(measurement *Measurement) string {
 	transportLayer := (*measurement.Packet).TransportLayer()
 	if transportLayer != nil {
+		fl := transportLayer.TransportFlow()
 		if p.Reverse {
-			return transportLayer.TransportFlow().Src().String()
+			if p.Both {
+				return fl.Src().String() + "/" + fl.Dst().String()
+			}
+			return fl.Src().String()
 		}
-		return transportLayer.TransportFlow().Dst().String()
-	}
-	return UNCLASSIFIED
-}
-
-func (p PortClassifier) MetaGroup(measurement *Measurement) string {
-	networkLayer := (*measurement.Packet).NetworkLayer()
-	if networkLayer != nil {
-		if p.Reverse {
-			return networkLayer.NetworkFlow().Src().String()
+		if p.Both {
+			return fl.Dst().String() + "/" + fl.Src().String()
 		}
-		return networkLayer.NetworkFlow().Dst().String()
+		return fl.Dst().String()
 	}
 	return UNCLASSIFIED
 }
@@ -48,11 +45,4 @@ func (p PortClassifier) GroupKeyStream(stream *TCPStream) string {
 		return stream.Transport.Src().String()
 	}
 	return stream.Transport.Dst().String()
-}
-
-func (p PortClassifier) MetaGroupStream(stream *TCPStream) string {
-	if p.Reverse {
-		return stream.Network.Src().String()
-	}
-	return stream.Network.Dst().String()
 }

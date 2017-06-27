@@ -25,16 +25,8 @@ func (d DayClassifier) GroupKey(measurement *Measurement) string {
 	return measurement.CaptureInfo.Timestamp.Format(d.Format)
 }
 
-func (DayClassifier) MetaGroup(measurement *Measurement) string {
-	return UNCLASSIFIED
-}
-
 // Stream Classifier
 
 func (d DayClassifier) GroupKeyStream(s *TCPStream) string {
 	return s.Start.Format(d.Format)
-}
-
-func (DayClassifier) MetaGroupStream(stream *TCPStream) string {
-	return UNCLASSIFIED
 }
