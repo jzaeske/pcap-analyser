@@ -173,7 +173,11 @@ func collectFilesOfType(path string, suffixes string) []string {
 
 	fileList := make([]string, 0)
 
-	sort.Sort(ByFileSize(files))
+	if strings.Contains(path, "time") {
+		sort.Sort(ByTime(files))
+	} else {
+		sort.Sort(ByFileSize(files))
+	}
 
 	for _, file := range files {
 		name := file.Name()
@@ -197,6 +201,18 @@ func (s ByFileSize) Swap(i, j int) {
 }
 func (s ByFileSize) Less(i, j int) bool {
 	return s[i].Size() > s[j].Size()
+}
+
+type ByTime []os.FileInfo
+
+func (s ByTime) Len() int {
+	return len(s)
+}
+func (s ByTime) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ByTime) Less(i, j int) bool {
+	return s[i].Name() < s[j].Name()
 }
 
 func buildComponentsMap(c Components) (componentsMap map[string]com.Component) {

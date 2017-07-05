@@ -43,3 +43,5 @@ func (p PayloadClassifier) GroupKeyStream(s *TCPStream) string {
 	}
 	return hex.EncodeToString(s.Payload)
 }
+
+func (i PayloadClassifier) Rev() {}

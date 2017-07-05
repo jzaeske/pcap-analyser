@@ -1,14 +1,14 @@
 package analyser
 
 import (
+	logger "../log"
+	"../util"
 	"./components"
 	"./report"
 	"encoding/csv"
 	"log"
 	"os"
 	"time"
-	"../util"
-	logger "../log"
 )
 
 type Analyzer struct {
@@ -19,6 +19,7 @@ type Analyzer struct {
 func NewAnalyzer(config *AnalysisConfig) (a *Analyzer) {
 	a = &Analyzer{}
 	a.config = config
+	components.OutputDir = config.Settings.Output
 	return
 }
 

@@ -1,9 +1,10 @@
 package chains
 
 import (
+	"../report"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	r "github.com/google/gopacket/reassembly"
+	r "github.com/jzaeske/gopacket/reassembly"
 	"strconv"
 	"time"
 )
@@ -51,6 +52,11 @@ type TCPStream struct {
 	// Keyed by the Index in Headers
 	Identifiers []IdentifierPair
 
+	PendingPackets int
+	PendingBytes   int
+	OverlapPackets int
+	OverlapBytes   int
+
 	// Scores
 	scores map[string]int
 	counts map[string]int
@@ -65,6 +71,8 @@ type TCPStream struct {
 	packets    int
 	next       *chan TCPStream
 	finished   bool
+
+	errorLog *report.Accumulator
 }
 
 func (s *TCPStream) HandshakeComplete() bool {
@@ -98,25 +106,24 @@ var dropped = 0
 
 func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFlowDirection, ackSeq r.Sequence, start *bool, ac r.AssemblerContext) bool {
 	if s.finished {
-		if (tcp.ACK || tcp.FIN) && !tcp.SYN && !tcp.RST {
-			// pure ack at end of connection. not countable anymore, but ok
-			return true
-		} else if !tcp.SYN {
-			*start = true
-			return true
-		} else {
-			return false
-		}
+		s.dropLog("late", tcp, dir)
+		return false
 	}
 
 	if tcp.SYN {
 		if tcp.ACK {
 			s.Handshake[1] = true
-		} else {
+		} else if !tcp.RST && !tcp.FIN {
 			s.Handshake[0] = true
+		} else {
+			s.Handshake[3] = true
 		}
-	} else if tcp.ACK && s.Handshake[1] {
+	} else if tcp.ACK && (s.Handshake[1] || s.Handshake[0]) {
 		s.Handshake[2] = true
+	}
+
+	if len(s.Headers) == 0 && tcp.SYN && tcp.ACK {
+		*start = true
 	}
 
 	if len(s.Headers) < HEADER_LIMIT {
@@ -139,31 +146,65 @@ func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFl
 		s.End = timestamp
 	}
 
-	if !tcp.SYN && !s.Handshake[0] {
+	if !s.Handshake[1] && !s.Handshake[0] {
+		if tcp.RST {
+			// if there was no handshake and this is an rst, this might be backscatter. set flag
+			s.Handshake[3] = true
+		} else {
+			s.dropLog("noHs", tcp, dir)
+		}
+
 		return false
 	}
 
 	return true
 }
 
-func (s *TCPStream) ReassembledSG(sg r.ScatterGather, ac r.AssemblerContext) {
-	length, _ := sg.Lengths()
-	if s.keepPayload {
-		data := sg.Fetch(length)
-		s.Payload = append(s.Payload, data...)
-	} else {
-		s.payloadBytes += length
+func (s *TCPStream) dropLog(typ string, tcp *layers.TCP, dir r.TCPFlowDirection) {
+	key := "_"
+	if len(tcp.LayerContents()) > 13 {
+		key = strconv.Itoa(int(tcp.LayerContents()[13] & 0x1F))
+	}
+	var prefix = "c_"
+	if dir == r.TCPDirServerToClient {
+		prefix = "s_"
 	}
 
-	s.packets += sg.Stats().Packets
+	s.errorLog.Increment(prefix+key, typ+"Packets")
+	s.errorLog.IncrementValue(prefix+key, typ+"Bytes", len(tcp.LayerPayload()))
+}
 
-	s.addCountsSg(sg)
+func (s *TCPStream) ReassembledSG(sg r.ScatterGather, ac r.AssemblerContext) {
+	length, _ := sg.Lengths()
+
+	if !s.finished {
+		if s.keepPayload {
+			data := sg.Fetch(length)
+			s.Payload = append(s.Payload, data...)
+		} else {
+			s.payloadBytes += length
+		}
+		sg.Info()
+
+		s.PendingBytes += sg.Stats().QueuedBytes
+		s.PendingPackets += sg.Stats().QueuedPackets
+		s.OverlapBytes += sg.Stats().OverlapBytes
+		s.OverlapPackets += sg.Stats().OverlapPackets
+
+		s.packets += sg.Stats().Packets
+
+		s.addCountsSg(sg)
+	}
 }
 
 func (s *TCPStream) ReassemblyComplete(ac r.AssemblerContext) bool {
-	s.finished = true
-	*s.next <- *s
-	return false
+	if !s.finished {
+		s.finished = true
+		*s.next <- *s
+		return true
+	} else {
+		return false
+	}
 }
 
 func (s *TCPStream) addCounts(tcp *layers.TCP, dir r.TCPFlowDirection) {
@@ -184,6 +225,9 @@ func (s *TCPStream) addCounts(tcp *layers.TCP, dir r.TCPFlowDirection) {
 	if tcp.FIN {
 		s.addCount(prefix, "fin")
 	}
+
+	s.addCount(prefix, "pck")
+	s.addCountValue(prefix, "all_bytes", len(tcp.Payload))
 }
 
 func (s *TCPStream) addCountsSg(sg r.ScatterGather) {
@@ -194,7 +238,7 @@ func (s *TCPStream) addCountsSg(sg r.ScatterGather) {
 		prefix = "s"
 	}
 
-	s.addCountValue(prefix, "pck", sg.Stats().Packets)
+	s.addCountValue(prefix, "ra_pck", sg.Stats().Packets)
 	length, _ := sg.Lengths()
 	s.addCountValue(prefix, "bytes", length)
 }
@@ -280,11 +324,12 @@ func (s *TCPStream) GetCsv(fields []string) []string {
 type TCPStreamFactory struct {
 	Next        *chan TCPStream
 	KeepPayload bool
+	Errors      *report.Accumulator
 }
 
 func (sf TCPStreamFactory) New(netFlow, tcpFlow gopacket.Flow, tcp *layers.TCP, ac r.AssemblerContext) r.Stream {
 	s := &TCPStream{
-		Handshake:   make([]bool, 3),
+		Handshake:   []bool{false, false, false, false},
 		Network:     netFlow,
 		Transport:   tcpFlow,
 		Start:       ac.GetCaptureInfo().Timestamp,
@@ -292,6 +337,8 @@ func (sf TCPStreamFactory) New(netFlow, tcpFlow gopacket.Flow, tcp *layers.TCP, 
 		keepPayload: sf.KeepPayload,
 		scores:      make(map[string]int),
 		counts:      make(map[string]int),
+		errorLog:    sf.Errors,
+		finished:    false,
 	}
 	s.End = s.Start
 	return s

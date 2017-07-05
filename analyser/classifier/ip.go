@@ -63,3 +63,7 @@ func ipOrNetwork(ip net.IP, mask net.IPMask) string {
 		return ip.String()
 	}
 }
+
+func (i Ip4Classifier) Rev() {
+	i.Reverse = !i.Reverse
+}

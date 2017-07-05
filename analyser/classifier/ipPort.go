@@ -97,3 +97,8 @@ func (i Ip4PortClassifier) GroupKeyStream(stream *TCPStream) string {
 
 	return result
 }
+
+func (i Ip4PortClassifier) Rev() {
+	i.ReverseIp = !i.ReverseIp
+	i.ReversePort = !i.ReversePort
+}

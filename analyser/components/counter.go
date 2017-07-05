@@ -156,9 +156,23 @@ func (c *StreamCounter) Run() {
 				})
 			}
 
-			counter.Increment(groupKey, columnIdentifier)
-			counter.IncrementValue(groupKey, columnIdentifier+"_pck_in", stream.GetCount("c_pck"))
-			counter.IncrementValue(groupKey, columnIdentifier+"_bytes_in", stream.GetCount("c_bytes"))
+			// reassembly is not fully reliable for direction detection. so it may be the wrong count here
+			// we might be able to correct this. Since we do not send data, just acknowledge headers, there must always
+			// be zero bytes out. if there are outgoing bytes and zero in, it is detected wrong and we correct it here
+
+			if stream.GetCount("c_bytes") == 0 && stream.GetCount("s_bytes") > 0 {
+				// reverse the classifier to
+				c.Sc.Rev()
+				groupKey := c.Sc.GroupKeyStream(&stream)
+				counter.Increment(groupKey, columnIdentifier)
+				counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("s_pck"))
+				counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("s_bytes"))
+				c.Sc.Rev()
+			} else {
+				counter.Increment(groupKey, columnIdentifier)
+				counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("c_pck"))
+				counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("c_bytes"))
+			}
 
 			c.output <- stream
 		}

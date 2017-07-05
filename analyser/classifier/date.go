@@ -30,3 +30,5 @@ func (d DayClassifier) GroupKey(measurement *Measurement) string {
 func (d DayClassifier) GroupKeyStream(s *TCPStream) string {
 	return s.Start.Format(d.Format)
 }
+
+func (d DayClassifier) Rev() {}

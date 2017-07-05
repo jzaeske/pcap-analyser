@@ -2,6 +2,8 @@ package components
 
 import "../chains"
 
+var OutputDir string
+
 type Component interface {
 	ComId() string
 	Init()

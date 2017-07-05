@@ -46,3 +46,7 @@ func (p PortClassifier) GroupKeyStream(stream *TCPStream) string {
 	}
 	return stream.Transport.Dst().String()
 }
+
+func (p PortClassifier) Rev() {
+	p.Reverse = !p.Reverse
+}

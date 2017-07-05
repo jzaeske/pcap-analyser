@@ -4,9 +4,9 @@ import (
 	. "../chains"
 	"../report"
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
-	r "github.com/google/gopacket/reassembly"
+	"github.com/jzaeske/gopacket/ip4defrag"
+	r "github.com/jzaeske/gopacket/reassembly"
 	"time"
 )
 
@@ -91,7 +91,7 @@ func (c *Composer) Run() {
 			if ipLayer := (*packet.Packet).Layer(layers.LayerTypeIPv4); ipLayer != nil {
 				ipPacket := ipLayer.(*layers.IPv4)
 
-				newIpPacket, err := c.defragmenter.DefragIPv4(ipPacket)
+				newIpPacket, err := c.defragmenter.DefragIPv4WithTimestamp(ipPacket, packet.CaptureInfo.Timestamp)
 				if err != nil {
 					c.counter.Increment("_", err.Error())
 					continue
@@ -130,8 +130,8 @@ func (c *Composer) Run() {
 			} else {
 				// if last flush is older than step size, delete flush window
 				if lastFlush.Add(moveDuration).Before((*packet.CaptureInfo).Timestamp) {
+					lastFlush = (*packet.CaptureInfo).Timestamp
 					if !c.OnlyDefrag {
-						lastFlush = (*packet.CaptureInfo).Timestamp
 						c.assembler.FlushCloseOlderThan(lastFlush.Add(deleteDuration))
 					}
 					if dis := c.defragmenter.DiscardOlderThan(lastFlush.Add(deleteDuration)); dis > 0 {
@@ -146,6 +146,6 @@ func (c *Composer) Run() {
 
 func (c *Composer) resetAssembler() {
 	c.defragmenter = ip4defrag.NewIPv4Defragmenter()
-	c.pool = r.NewStreamPool(TCPStreamFactory{Next: c.Output(), KeepPayload: c.KeepPayload})
+	c.pool = r.NewStreamPool(TCPStreamFactory{Next: c.Output(), KeepPayload: c.KeepPayload, Errors: c.counter})
 	c.assembler = r.NewAssembler(c.pool)
 }

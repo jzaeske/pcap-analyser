@@ -30,3 +30,5 @@ func (p StaticClassifier) GroupKey(measurement *Measurement) string {
 func (p StaticClassifier) GroupKeyStream(s *TCPStream) string {
 	return p.Filename
 }
+
+func (p StaticClassifier) Rev() {}

@@ -17,4 +17,5 @@ type PacketClassifier interface {
 type StreamClassifier interface {
 	general
 	GroupKeyStream(s *TCPStream) string
+	Rev()
 }

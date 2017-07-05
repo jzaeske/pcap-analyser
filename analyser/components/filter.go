@@ -27,6 +27,7 @@ type Filter struct {
 	Criteria  string `xml:"bpf,attr"`
 	MinTime   string `xml:"minTime,attr"`
 	MaxTime   string `xml:"maxTime,attr"`
+	Drop      bool   `xml:"drop,attr"`
 	input     chan Measurement
 	output    chan Measurement
 	no        chan Measurement
@@ -112,18 +113,24 @@ func (f *Filter) Run() {
 				}
 
 				if minTime != nil && minTime.After((*measurement.CaptureInfo).Timestamp) {
-					f.no <- measurement
+					if !f.Drop {
+						f.no <- measurement
+					}
 					continue
 				}
 				if maxTime != nil && maxTime.Before((*measurement.CaptureInfo).Timestamp) {
-					f.no <- measurement
+					if !f.Drop {
+						f.no <- measurement
+					}
 					continue
 				}
 
 				if bpf.Matches(*measurement.CaptureInfo, (*measurement.Packet).Data()) {
 					f.output <- measurement
 				} else {
-					f.no <- measurement
+					if !f.Drop {
+						f.no <- measurement
+					}
 				}
 			}
 		}

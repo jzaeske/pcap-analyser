@@ -80,6 +80,7 @@
         <xs:attribute name="bpf" type="xs:string"/>
         <xs:attribute name="minTime" type="xs:string"/>
         <xs:attribute name="maxTime" type="xs:string"/>
+        <xs:attribute name="drop" type="xs:boolean"/>
     </xs:complexType>
     <xs:complexType name="StreamFilter">
         <xs:sequence minOccurs="0" maxOccurs="unbounded">
@@ -93,6 +94,16 @@
         <xs:attribute name="p" type="xs:float" use="required"/>
     </xs:complexType>
     <xs:complexType name="PacketOutput">
+        <xs:choice minOccurs="0" maxOccurs="1">
+            <xs:element type="PortClassifier" name="PortClassifier"/>
+            <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+            <xs:element type="Ip4PortClassifier" name="Ip4PortClassifier"/>
+            <xs:element type="DayClassifier" name="DayClassifier"/>
+            <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
+            <xs:element type="StaticClassifier" name="StaticClassifier"/>
+            <xs:element type="IcmpClassifier" name="IcmpClassifier"/>
+            <xs:element type="TransportClassifier" name="TransportClassifier"/>
+        </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="outputFile" type="xs:string" use="required"/>
     </xs:complexType>
