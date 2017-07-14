@@ -21,9 +21,11 @@ type StreamInput interface {
 }
 
 type TcpContext struct {
-	Ci      gopacket.CaptureInfo
-	Id      uint16
-	Reverse bool
+	Ci        gopacket.CaptureInfo
+	Id        uint16
+	Reverse   bool
+	Dir       r.TCPFlowDirection
+	SwitchDir bool
 }
 
 func (c TcpContext) GetCaptureInfo() gopacket.CaptureInfo {
@@ -105,6 +107,14 @@ func (s *TCPStream) HeaderSize() int {
 var dropped = 0
 
 func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFlowDirection, ackSeq r.Sequence, start *bool, ac r.AssemblerContext) bool {
+	var context TcpContext
+	context, ok := ac.(TcpContext)
+	if ok && context.SwitchDir {
+		if dir != context.Dir {
+			dir = context.Dir
+		}
+	}
+
 	if s.finished {
 		s.dropLog("late", tcp, dir)
 		return false
@@ -134,9 +144,7 @@ func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFl
 	}
 
 	if dir == r.TCPDirClientToServer && len(s.Identifiers) < 20 {
-		if context, ok := ac.(TcpContext); ok {
-			s.Identifiers = append(s.Identifiers, IdentifierPair{context.GetIdentifier(), tcp})
-		}
+		s.Identifiers = append(s.Identifiers, IdentifierPair{context.GetIdentifier(), tcp})
 	}
 
 	s.addCounts(tcp, dir)
@@ -147,7 +155,7 @@ func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFl
 	}
 
 	if !s.Handshake[1] && !s.Handshake[0] {
-		if tcp.RST {
+		if tcp.RST && dir == r.TCPDirClientToServer {
 			// if there was no handshake and this is an rst, this might be backscatter. set flag
 			s.Handshake[3] = true
 		} else {

@@ -160,19 +160,19 @@ func (c *StreamCounter) Run() {
 			// we might be able to correct this. Since we do not send data, just acknowledge headers, there must always
 			// be zero bytes out. if there are outgoing bytes and zero in, it is detected wrong and we correct it here
 
-			if stream.GetCount("c_bytes") == 0 && stream.GetCount("s_bytes") > 0 {
-				// reverse the classifier to
-				c.Sc.Rev()
-				groupKey := c.Sc.GroupKeyStream(&stream)
-				counter.Increment(groupKey, columnIdentifier)
-				counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("s_pck"))
-				counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("s_bytes"))
-				c.Sc.Rev()
-			} else {
+			//if stream.GetCount("c_bytes") == 0 && stream.GetCount("s_bytes") > 0 {
+			//	// reverse the classifier to
+			//	c.Sc.Rev()
+			//	groupKey := c.Sc.GroupKeyStream(&stream)
+			//	counter.Increment(groupKey, columnIdentifier)
+			//	counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("s_pck"))
+			//	counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("s_bytes"))
+			//	c.Sc.Rev()
+			//} else {
 				counter.Increment(groupKey, columnIdentifier)
 				counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("c_pck"))
-				counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("c_bytes"))
-			}
+			counter.IncrementValue(groupKey, columnIdentifier+"Payload", len(stream.Payload))
+			//}
 
 			c.output <- stream
 		}

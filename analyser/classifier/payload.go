@@ -8,6 +8,7 @@ import (
 type PayloadClassifier struct {
 	Identifier string `xml:"identifier,attr"`
 	Bytes      int    `xml:"bytes,attr"`
+	Offset     int    `xml:"offset,attr"`
 }
 
 // General Classifier
@@ -24,12 +25,19 @@ func (p PayloadClassifier) GroupName() string {
 
 func (p PayloadClassifier) GroupKey(measurement *Measurement) string {
 	transportLayer := (*measurement.Packet).TransportLayer()
+
+	fetchLength := p.Bytes + p.Offset
+
 	if transportLayer != nil {
-		if len(transportLayer.LayerPayload()) < p.Bytes {
-			return hex.EncodeToString(transportLayer.LayerPayload())
+		payload := transportLayer.LayerPayload()
+		if len(payload) < p.Offset {
+			return ""
 		}
-		payload := transportLayer.LayerPayload()[0:p.Bytes]
-		return hex.EncodeToString(payload)
+		if len(payload) < fetchLength {
+			return hex.EncodeToString(payload[p.Offset:])
+		}
+		part := transportLayer.LayerPayload()[p.Offset:fetchLength]
+		return hex.EncodeToString(part)
 	}
 	return UNCLASSIFIED
 }
@@ -37,11 +45,16 @@ func (p PayloadClassifier) GroupKey(measurement *Measurement) string {
 // Stream Classifier
 
 func (p PayloadClassifier) GroupKeyStream(s *TCPStream) string {
-	if len(s.Payload) >= p.Bytes {
-		payload := s.Payload[0:p.Bytes]
-		return hex.EncodeToString(payload)
+	fetchLength := p.Bytes + p.Offset
+
+	if len(s.Payload) < p.Offset {
+		return ""
 	}
-	return hex.EncodeToString(s.Payload)
+	if len(s.Payload) < fetchLength {
+		return hex.EncodeToString(s.Payload[p.Offset:])
+	}
+
+	return hex.EncodeToString(s.Payload[p.Offset:fetchLength])
 }
 
 func (i PayloadClassifier) Rev() {}

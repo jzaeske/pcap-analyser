@@ -10,7 +10,7 @@ import (
 type Ip4Classifier struct {
 	Identifier string `xml:"identifier,attr"`
 	Reverse    bool   `xml:"reverse,attr"`
-	CIDR       int
+	CIDR       int    `xml:"cidr,attr"`
 	mask       net.IPMask
 }
 
@@ -49,10 +49,27 @@ func (i Ip4Classifier) GroupKey(measurement *Measurement) string {
 // Stream Classifier
 
 func (i Ip4Classifier) GroupKeyStream(stream *TCPStream) string {
-	if i.Reverse {
-		return stream.Network.Src().String()
+	if i.mask == nil && i.CIDR > 0 && i.CIDR < 32 {
+		i.mask = net.CIDRMask(i.CIDR, 32)
 	}
-	return stream.Network.Dst().String()
+
+	if i.mask != nil {
+		var ipBytes []byte
+		if i.Reverse {
+			ipBytes = stream.Network.Src().Raw()
+		} else {
+			ipBytes = stream.Network.Dst().Raw()
+		}
+		ip := net.IPv4(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3])
+
+		return ipOrNetwork(ip, i.mask)
+	} else {
+		if i.Reverse {
+			return stream.Network.Src().String()
+		} else {
+			return stream.Network.Dst().String()
+		}
+	}
 }
 
 func ipOrNetwork(ip net.IP, mask net.IPMask) string {

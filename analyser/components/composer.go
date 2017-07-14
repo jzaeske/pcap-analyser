@@ -8,6 +8,7 @@ import (
 	"github.com/jzaeske/gopacket/ip4defrag"
 	r "github.com/jzaeske/gopacket/reassembly"
 	"time"
+	"net"
 )
 
 var moveDuration, _ = time.ParseDuration("30s")
@@ -26,10 +27,12 @@ type Composer struct {
 	pool         *r.StreamPool
 	KeepPayload  bool `xml:"keepPayload,attr"`
 	OnlyDefrag   bool `xml:"onlyDefrag,attr"`
+	InEthDst     string `xml:"inEthDst,attr"`
+	inEthDst     *net.HardwareAddr
 }
 
 func (c *Composer) Copy() Component {
-	return &Composer{Id: c.Id, KeepPayload: c.KeepPayload, OnlyDefrag: c.OnlyDefrag}
+	return &Composer{Id: c.Id, KeepPayload: c.KeepPayload, OnlyDefrag: c.OnlyDefrag, InEthDst: c.InEthDst}
 }
 
 func (c *Composer) Init() {
@@ -37,6 +40,12 @@ func (c *Composer) Init() {
 	c.other = make(chan Measurement, CHANNEL_BUFFER_SIZE)
 	c.counter = report.GenerateAccumulator("reassembly")
 	c.resetAssembler()
+
+	if c.InEthDst != "" {
+		if ethDst, err := net.ParseMAC(c.InEthDst); err == nil {
+			c.inEthDst = &ethDst
+		}
+	}
 }
 
 func (c *Composer) ComId() string {
@@ -111,8 +120,20 @@ func (c *Composer) Run() {
 					c.other <- packet
 				} else if tcpLayer := (*packet.Packet).Layer(layers.LayerTypeTCP); tcpLayer != nil {
 					if tcpPacket, ok := tcpLayer.(*layers.TCP); ok {
+						context := TcpContext{Ci: *packet.CaptureInfo, Id: newIpPacket.Id}
+						if c.inEthDst != nil {
+							if ethLayer := (*packet.Packet).Layer(layers.LayerTypeEthernet); ethLayer != nil {
+								eth, _ := ethLayer.(*layers.Ethernet)
+								context.SwitchDir = true
+								if eth.DstMAC.String() == c.inEthDst.String() {
+									context.Dir = r.TCPDirClientToServer
+								} else {
+									context.Dir = r.TCPDirServerToClient
+								}
+							}
+						}
 						tcpPacket.SetNetworkLayerForChecksum((*packet.Packet).NetworkLayer())
-						c.assembler.AssembleWithContext((*packet.Packet).NetworkLayer().NetworkFlow(), tcpPacket, TcpContext{Ci: *packet.CaptureInfo, Id: newIpPacket.Id})
+						c.assembler.AssembleWithContext((*packet.Packet).NetworkLayer().NetworkFlow(), tcpPacket, context)
 					} else {
 						c.counter.Increment("_", "tcp_corrupt")
 					}

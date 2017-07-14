@@ -1,6 +1,8 @@
 package score
 
-import . "../chains"
+import (
+	. "../chains"
+)
 
 const ZMAP_IDENTIFIER = 54321
 

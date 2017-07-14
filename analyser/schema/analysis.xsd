@@ -36,6 +36,7 @@
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="keepPayload" type="xs:boolean" use="optional" default="false"/>
         <xs:attribute name="onlyDefrag" type="xs:boolean" use="optional" default="false"/>
+        <xs:attribute name="inEthDst" type="xs:string" use="optional"/>
     </xs:complexType>
     <xs:complexType name="StreamCounter">
         <xs:sequence>
@@ -138,6 +139,7 @@
     <xs:complexType name="PayloadClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
         <xs:attribute name="bytes" type="xs:int" use="required"/>
+        <xs:attribute name="offset" type="xs:int" use="optional"/>
     </xs:complexType>
     <xs:complexType name="StaticClassifier">
         <xs:attribute name="identifier" type="xs:string" use="required"/>
