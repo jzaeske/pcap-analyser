@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"log"
+	"path/filepath"
 )
 
 const WRITE_BUFFER_SIZE = 4 * 1024 * 1024
@@ -171,13 +173,14 @@ type CsvStreamOutput struct {
 	Id         string `xml:"id,attr"`
 	OutputFile string `xml:"outputFile,attr"`
 	Fields     string `xml:"fields,attr"`
+	Sc         classifier.StreamClassifier
 	input      chan TCPStream
 	output     chan TCPStream
 	pubOutput  bool
 }
 
 func (c *CsvStreamOutput) Copy() Component {
-	return &CsvStreamOutput{Id: c.Id, OutputFile: c.OutputFile, Fields: c.Fields}
+	return &CsvStreamOutput{Id: c.Id, OutputFile: c.OutputFile, Fields: c.Fields, Sc: *&c.Sc}
 }
 
 func (c *CsvStreamOutput) Init() {
@@ -206,10 +209,19 @@ func (c *CsvStreamOutput) OpenChannels() []interface{} {
 }
 
 func (c *CsvStreamOutput) Run() {
+	defer close(c.output)
 	if c.Input != nil {
+		if c.Sc != nil {
+			c.runWithClassifier()
+			return
+		}
 		csvCounterLock.Lock()
 		csvCounter++
 		c.OutputFile = strings.Replace(OutputDir+"/"+c.OutputFile, "$", strconv.Itoa(csvCounter), -1)
+		if err := os.MkdirAll(c.OutputFile, 0777); err != nil {
+			log.Println("Unable to create custom dir; Using default")
+			c.OutputFile = OutputDir + "/" + strings.Replace(c.OutputFile, "/", "_", -1)
+		}
 		csvCounterLock.Unlock()
 		f, _ := os.Create(c.OutputFile)
 		buf := bufio.NewWriterSize(f, WRITE_BUFFER_SIZE)
@@ -239,5 +251,107 @@ func (c *CsvStreamOutput) Run() {
 		buf.Flush()
 		f.Close()
 	}
-	defer close(c.output)
+}
+
+func (c *CsvStreamOutput) runWithClassifier() {
+	writer := make(map[string]csv.Writer)
+
+	csvCounterLock.Lock()
+	csvCounter++
+	c.OutputFile = strings.Replace(c.OutputFile, "$", strconv.Itoa(csvCounter), -1)
+	csvCounterLock.Unlock()
+
+	for stream := range c.input {
+		class := c.Sc.GroupKeyStream(&stream)
+		fieldList := strings.Split(c.Fields, ",")
+		var wr csv.Writer
+
+		if w, ok := writer[class]; !ok {
+			file := strings.Replace(c.OutputFile, "#", class, 1)
+			fileName := OutputDir + "/" + file
+			if err := os.MkdirAll(filepath.Dir(fileName), 0777); err != nil {
+				log.Println("Unable to create custom dir; Using default")
+				fileName = OutputDir + "/" + strings.Replace(file, "/", "_", -1)
+			}
+			f, _ := os.Create(fileName)
+			buf := bufio.NewWriterSize(f, WRITE_BUFFER_SIZE)
+
+			var gzipWriter *gzip.Writer
+			if strings.HasSuffix(c.OutputFile, ".gz") {
+				gzipWriter = gzip.NewWriter(buf)
+				wr = *csv.NewWriter(gzipWriter)
+			} else {
+				wr = *csv.NewWriter(buf)
+			}
+
+			wr.Write(fieldList)
+			writer[class] = wr
+
+			// defers are LIFO
+			defer f.Close()
+			defer buf.Flush()
+			if gzipWriter != nil {
+				defer gzipWriter.Close()
+			}
+			defer wr.Flush()
+		} else {
+			wr = w
+		}
+
+		wr.Write(stream.GetCsv(fieldList))
+		c.output <- stream
+
+	}
+}
+
+func (c *CsvStreamOutput) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	for _, attr := range start.Attr {
+		if attr.Name.Local == "id" {
+			c.Id = attr.Value
+		}
+		if attr.Name.Local == "outputFile" {
+			c.OutputFile = attr.Value
+		}
+		if attr.Name.Local == "fields" {
+			c.Fields = attr.Value
+		}
+	}
+	for {
+		t, err := d.Token()
+		if err != nil {
+			return err
+		}
+		var cl classifier.StreamClassifier
+		switch tt := t.(type) {
+		case xml.StartElement:
+			switch tt.Name.Local {
+			case "Ip4Classifier":
+				cl = new(classifier.Ip4Classifier)
+			case "Ip4PortClassifier":
+				cl = new(classifier.Ip4PortClassifier)
+			case "PortClassifier":
+				cl = new(classifier.PortClassifier)
+			case "DayClassifier":
+				cl = new(classifier.DayClassifier)
+			case "PayloadClassifier":
+				cl = new(classifier.PayloadClassifier)
+			case "StaticClassifier":
+				cl = new(classifier.StaticClassifier)
+			}
+
+			if cl != nil {
+				err = d.DecodeElement(cl, &tt)
+				if err != nil {
+					return err
+				}
+				c.Sc = cl
+			}
+		case xml.EndElement:
+			if tt == start.End() {
+				return nil
+			}
+		}
+	}
+
+	return nil
 }

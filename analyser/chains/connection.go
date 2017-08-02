@@ -7,6 +7,7 @@ import (
 	r "github.com/jzaeske/gopacket/reassembly"
 	"strconv"
 	"time"
+	"encoding/hex"
 )
 
 const HEADER_LIMIT = 20
@@ -155,13 +156,13 @@ func (s *TCPStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir r.TCPFl
 	}
 
 	if !s.Handshake[1] && !s.Handshake[0] {
-		if tcp.RST && dir == r.TCPDirClientToServer {
+		if tcp.RST && dir == r.TCPDirClientToServer && len(s.Headers) == 1 {
 			// if there was no handshake and this is an rst, this might be backscatter. set flag
 			s.Handshake[3] = true
 		} else {
 			s.dropLog("noHs", tcp, dir)
 		}
-
+		s.AddScore("score_nohs", 1)
 		return false
 	}
 
@@ -315,6 +316,8 @@ func (s *TCPStream) GetCsv(fields []string) []string {
 			result[i] = s.Start.Format("2006/01/02 15:04:05")
 		case "t_dur":
 			result[i] = strconv.Itoa(int(s.End.Unix()-s.Start.Unix())*1000 + ((s.End.Nanosecond() - s.Start.Nanosecond()) / 1000000))
+		case "payload":
+			result[i] = hex.EncodeToString(s.Payload)
 		default:
 			if val, ok := s.scores[field]; ok {
 				result[i] = strconv.Itoa(val)

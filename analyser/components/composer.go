@@ -25,8 +25,8 @@ type Composer struct {
 	defragmenter *ip4defrag.IPv4Defragmenter
 	assembler    *r.Assembler
 	pool         *r.StreamPool
-	KeepPayload  bool `xml:"keepPayload,attr"`
-	OnlyDefrag   bool `xml:"onlyDefrag,attr"`
+	KeepPayload  bool   `xml:"keepPayload,attr"`
+	OnlyDefrag   bool   `xml:"onlyDefrag,attr"`
 	InEthDst     string `xml:"inEthDst,attr"`
 	inEthDst     *net.HardwareAddr
 }
@@ -111,9 +111,17 @@ func (c *Composer) Run() {
 
 				if newIpPacket.Length > ipPacket.Length {
 					c.counter.Increment("_", "ip_defrag")
-					pb, _ := (*packet.Packet).(gopacket.PacketBuilder)
-					nextDecoder := newIpPacket.NextLayerType()
-					nextDecoder.Decode(newIpPacket.Payload, pb)
+					// Remove Fragment Information on Header
+					ipHeader := ipPacket.LayerContents()
+					ipHeader[2] = byte((len(newIpPacket.LayerPayload()) + 20) / 256)
+					ipHeader[3] = byte((len(newIpPacket.LayerPayload()) + 20) % 256)
+					ipHeader[6] = 0
+					ipHeader[7] = 0
+
+					// Build new Packet
+					ip := append(ipHeader, newIpPacket.LayerPayload()...)
+					data := append((*packet.Packet).Data()[0:14], ip...)
+					*packet.Packet = gopacket.NewPacket(data, layers.LinkTypeEthernet, gopacket.Lazy)
 				}
 
 				if c.OnlyDefrag {

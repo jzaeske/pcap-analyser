@@ -216,7 +216,10 @@ func (comp *ScoreComparator) Compare(stream *TCPStream) bool {
 	if comp.Min > 0 && stream.GetScore(comp.Score) < comp.Min {
 		return false
 	}
-	if comp.Max != 0 && stream.GetScore(comp.Score) > comp.Max {
+	if comp.Max == -1 && stream.GetScore(comp.Score) > 0 {
+		return false
+	}
+	if comp.Max > 0 && stream.GetScore(comp.Score) > comp.Max {
 		return false
 	}
 	return true

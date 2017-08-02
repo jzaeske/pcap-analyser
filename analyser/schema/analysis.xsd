@@ -109,6 +109,14 @@
         <xs:attribute name="outputFile" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="CsvStreamOutput">
+        <xs:choice minOccurs="0" maxOccurs="1">
+            <xs:element type="PortClassifier" name="PortClassifier"/>
+            <xs:element type="Ip4Classifier" name="Ip4Classifier"/>
+            <xs:element type="Ip4PortClassifier" name="Ip4PortClassifier"/>
+            <xs:element type="DayClassifier" name="DayClassifier"/>
+            <xs:element type="PayloadClassifier" name="PayloadClassifier"/>
+            <xs:element type="StaticClassifier" name="StaticClassifier"/>
+        </xs:choice>
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="outputFile" type="xs:string" use="required"/>
         <xs:attribute name="fields" type="xs:string" use="required"/>
@@ -195,6 +203,7 @@
             <xs:element name="Output" type="xs:string" minOccurs="1" maxOccurs="1"/>
             <xs:element name="Concurrent" type="xs:int" default="1"/>
             <xs:element name="LogFile" type="xs:string"/>
+            <xs:element name="BufferSize" type="xs:int"/>
         </xs:choice>
     </xs:complexType>
     <xs:complexType name="SpecialPackets">

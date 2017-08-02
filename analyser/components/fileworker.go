@@ -29,16 +29,18 @@ func WaitForFileWorkers() {
 }
 
 type FileWorker struct {
-	id    int
-	chain *Parser
-	r     *bufio.Reader
-	skip  PacketSkipper
+	id         int
+	chain      *Parser
+	r          *bufio.Reader
+	skip       PacketSkipper
+	bufferSize int
 }
 
-func NewFileWorker(id int, chain *Parser, skip PacketSkipper) (w FileWorker) {
+func NewFileWorker(id int, chain *Parser, skip PacketSkipper, bufferSize int) (w FileWorker) {
 	w.id = id
 	w.chain = chain
 	w.skip = skip
+	w.bufferSize = bufferSize
 	return
 }
 
@@ -63,7 +65,12 @@ func (w *FileWorker) handleFile(file string) {
 	defer f.Close()
 	var start = true
 	// add a large buffer between File Reader and gcapgo to reduce the amount of IO reads to the filesystem
-	w.r = bufio.NewReaderSize(f, FILE_READ_BUFFER_SIZE)
+	if w.bufferSize > 0 {
+		w.r = bufio.NewReaderSize(f, w.bufferSize*1024*1024)
+	} else {
+		w.r = bufio.NewReaderSize(f, FILE_READ_BUFFER_SIZE)
+	}
+
 	if r, err := pcapgo.NewReader(w.r); err != nil {
 		log.Panic(err)
 	} else {

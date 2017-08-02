@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"time"
+	"strings"
+	"path/filepath"
 )
 
 type Analyzer struct {
@@ -33,7 +35,7 @@ func (a *Analyzer) Run() {
 
 	for i := 0; i < a.config.Settings.Concurrent; i++ {
 		chain, wg := a.config.GetChain()
-		var worker = components.NewFileWorker(i, chain, &a.config.SpecialPackets)
+		var worker = components.NewFileWorker(i, chain, &a.config.SpecialPackets, a.config.Settings.BufferSize)
 		a.workers = append(a.workers, worker)
 		go worker.Run(files, wg)
 	}
@@ -78,7 +80,12 @@ func (a *Analyzer) ExportCsv() {
 	}
 
 	for _, reportFile := range report.GetIdentifiers() {
-		if f, err := os.Create(outputDir + "/" + reportFile + ".csv"); err == nil {
+		outputFile := outputDir + "/" + reportFile + ".csv"
+		if err := os.MkdirAll(filepath.Dir(outputFile), 0777); err != nil {
+			log.Println("Unable to create custom dir; Using default")
+			outputFile = outputDir + "/" + strings.Replace(reportFile, "/", "_", -1) + ".csv"
+		}
+		if f, err := os.Create(outputFile); err == nil {
 			w := csv.NewWriter(f)
 
 			result := report.GetJoinedAccumulator(reportFile)

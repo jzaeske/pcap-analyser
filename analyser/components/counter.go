@@ -169,8 +169,8 @@ func (c *StreamCounter) Run() {
 			//	counter.IncrementValue(groupKey, columnIdentifier+"Payload", stream.GetCount("s_bytes"))
 			//	c.Sc.Rev()
 			//} else {
-				counter.Increment(groupKey, columnIdentifier)
-				counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("c_pck"))
+			counter.Increment(groupKey, columnIdentifier)
+			counter.IncrementValue(groupKey, columnIdentifier+"Packets", stream.GetCount("c_pck"))
 			counter.IncrementValue(groupKey, columnIdentifier+"Payload", len(stream.Payload))
 			//}
 
@@ -184,7 +184,7 @@ func (c *StreamCounter) getAccumulator(stream *TCPStream) *report.Accumulator {
 		return c.count["_"]
 	}
 
-	metaKey := c.MetaC.GroupKeyStream(stream)
+	metaKey := c.MetaC.ColumnIdentifier() + c.MetaC.GroupKeyStream(stream)
 
 	if counter, ok := c.count[metaKey]; ok {
 		return counter

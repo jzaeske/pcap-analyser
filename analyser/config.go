@@ -54,6 +54,7 @@ type Settings struct {
 	Input      string
 	Output     string
 	LogFile    string
+	BufferSize int
 	Concurrent int
 }
 
