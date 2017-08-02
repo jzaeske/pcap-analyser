@@ -7,8 +7,8 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/jzaeske/gopacket/ip4defrag"
 	r "github.com/jzaeske/gopacket/reassembly"
-	"time"
 	"net"
+	"time"
 )
 
 var moveDuration, _ = time.ParseDuration("30s")

@@ -8,9 +8,9 @@ import (
 	"encoding/csv"
 	"log"
 	"os"
-	"time"
-	"strings"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
 type Analyzer struct {

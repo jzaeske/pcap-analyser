@@ -10,12 +10,12 @@ import (
 	"encoding/xml"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
+	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"log"
-	"path/filepath"
 )
 
 const WRITE_BUFFER_SIZE = 4 * 1024 * 1024

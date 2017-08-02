@@ -2,12 +2,12 @@ package chains
 
 import (
 	"../report"
+	"encoding/hex"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	r "github.com/jzaeske/gopacket/reassembly"
 	"strconv"
 	"time"
-	"encoding/hex"
 )
 
 const HEADER_LIMIT = 20
