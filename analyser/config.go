@@ -1,10 +1,10 @@
 package analyser
 
 import (
-	"./chains"
-	com "./components"
 	"encoding/xml"
 	"errors"
+	"github.com/jzaeske/pcap-analyser/analyser/chains"
+	com "github.com/jzaeske/pcap-analyser/analyser/components"
 	"io/ioutil"
 	"log"
 	"os"

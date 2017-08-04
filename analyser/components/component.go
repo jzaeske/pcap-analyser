@@ -1,6 +1,6 @@
 package components
 
-import "../chains"
+import "github.com/jzaeske/pcap-analyser/analyser/chains"
 
 var OutputDir string
 

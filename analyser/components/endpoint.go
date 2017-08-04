@@ -1,7 +1,7 @@
 package components
 
 import (
-	. "../chains"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 	"log"
 	"sync"
 )

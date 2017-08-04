@@ -1,11 +1,11 @@
 package components
 
 import (
-	. "../chains"
-	"../classifier"
-	"../report"
 	"encoding/xml"
 	"github.com/google/gopacket"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
+	"github.com/jzaeske/pcap-analyser/analyser/classifier"
+	"github.com/jzaeske/pcap-analyser/analyser/report"
 	"strconv"
 )
 

@@ -1,9 +1,9 @@
 package components
 
 import (
-	. "../chains"
-	"../score"
 	"encoding/xml"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
+	"github.com/jzaeske/pcap-analyser/analyser/score"
 )
 
 type StreamScorer struct {

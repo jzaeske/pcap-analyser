@@ -1,8 +1,8 @@
 package classifier
 
 import (
-	. "../chains"
 	"github.com/google/gopacket/layers"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 	"net"
 	"strconv"
 )

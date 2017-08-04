@@ -1,7 +1,7 @@
 package score
 
 import (
-	. "../chains"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 	"strconv"
 	"strings"
 )

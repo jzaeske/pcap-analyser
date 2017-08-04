@@ -1,7 +1,7 @@
 package report
 
 import (
-	"../../merge"
+	"github.com/jzaeske/pcap-analyser/merge"
 	"sort"
 	"strconv"
 	"sync"

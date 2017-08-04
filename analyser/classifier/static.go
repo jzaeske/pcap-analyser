@@ -1,7 +1,7 @@
 package classifier
 
 import (
-	. "../chains"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 )
 
 type StaticClassifier struct {

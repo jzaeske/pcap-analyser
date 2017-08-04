@@ -1,6 +1,6 @@
 package classifier
 
-import . "../chains"
+import . "github.com/jzaeske/pcap-analyser/analyser/chains"
 
 const DATE_FORMAT = "2006/01/02"
 

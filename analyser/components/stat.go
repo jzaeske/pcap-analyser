@@ -1,8 +1,8 @@
 package components
 
 import (
-	"../../statistics"
-	. "../chains"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
+	"github.com/jzaeske/pcap-analyser/statistics"
 )
 
 type Stat struct {

@@ -1,11 +1,11 @@
 package analyser
 
 import (
-	logger "../log"
-	"../util"
-	"./components"
-	"./report"
 	"encoding/csv"
+	"github.com/jzaeske/pcap-analyser/analyser/components"
+	"github.com/jzaeske/pcap-analyser/analyser/report"
+	logger "github.com/jzaeske/pcap-analyser/log"
+	"github.com/jzaeske/pcap-analyser/util"
 	"log"
 	"os"
 	"path/filepath"

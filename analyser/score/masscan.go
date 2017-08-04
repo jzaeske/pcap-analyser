@@ -1,6 +1,6 @@
 package score
 
-import . "../chains"
+import . "github.com/jzaeske/pcap-analyser/analyser/chains"
 import "encoding/binary"
 
 // ip_id = ip_them ^ port_them ^ seqno;

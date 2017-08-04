@@ -1,8 +1,8 @@
 package score
 
 import (
-	. "../chains"
 	"encoding/hex"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 )
 
 type Payload struct {

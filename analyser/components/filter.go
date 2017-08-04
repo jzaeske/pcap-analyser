@@ -1,10 +1,10 @@
 package components
 
 import (
-	. "../chains"
 	"encoding/xml"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 	"log"
 	"time"
 )

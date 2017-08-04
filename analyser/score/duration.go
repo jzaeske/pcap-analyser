@@ -1,6 +1,6 @@
 package score
 
-import . "../chains"
+import . "github.com/jzaeske/pcap-analyser/analyser/chains"
 
 type Duration struct {
 	Id  string `xml:"identifier,attr"`

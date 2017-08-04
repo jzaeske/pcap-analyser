@@ -1,12 +1,12 @@
 package components
 
 import (
-	. "../chains"
-	"../report"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/jzaeske/gopacket/ip4defrag"
 	r "github.com/jzaeske/gopacket/reassembly"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
+	"github.com/jzaeske/pcap-analyser/analyser/report"
 	"net"
 	"time"
 )

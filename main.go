@@ -1,9 +1,9 @@
 package main
 
 import (
-	"./analyser"
 	"encoding/xml"
 	"flag"
+	"github.com/jzaeske/pcap-analyser/analyser"
 	"io/ioutil"
 	"log"
 )

@@ -1,11 +1,11 @@
 package components
 
 import (
-	. "../chains"
 	"bufio"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 	"io"
 	"log"
 	"os"

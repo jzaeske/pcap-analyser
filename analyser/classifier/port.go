@@ -1,6 +1,6 @@
 package classifier
 
-import . "../chains"
+import . "github.com/jzaeske/pcap-analyser/analyser/chains"
 
 type PortClassifier struct {
 	Identifier string `xml:"identifier,attr"`

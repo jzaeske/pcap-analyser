@@ -1,15 +1,15 @@
 package components
 
 import (
-	. "../chains"
-	"../classifier"
-	"../report"
 	"bufio"
 	"compress/gzip"
 	"encoding/csv"
 	"encoding/xml"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
+	"github.com/jzaeske/pcap-analyser/analyser/classifier"
+	"github.com/jzaeske/pcap-analyser/analyser/report"
 	"log"
 	"os"
 	"path/filepath"

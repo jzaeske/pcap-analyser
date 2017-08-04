@@ -1,7 +1,7 @@
 package statistics_test
 
 import (
-	"../statistics"
+	"github.com/jzaeske/pcap-analyser/statistics"
 	"testing"
 )
 

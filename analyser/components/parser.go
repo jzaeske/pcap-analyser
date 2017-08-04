@@ -1,9 +1,9 @@
 package components
 
 import (
-	. "../chains"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	. "github.com/jzaeske/pcap-analyser/analyser/chains"
 )
 
 var ParserOptions = gopacket.DecodeOptions{Lazy: true}
